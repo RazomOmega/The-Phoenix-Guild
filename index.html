@@ -244,6 +244,32 @@
   .chip.superseded{ border-color:rgba(58,46,28,0.22); font-style:italic; }
   .row:not(.superseded) .chip.superseded{ display:none; }
 
+  /* ---------- shared racks and the coin chest ---------- */
+  .panel{ margin:10px 0 2px 38px; }
+  .panel[hidden]{ display:none; }
+  .panel-head{
+    font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--text-muted); margin-bottom:7px;
+  }
+  .slots{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:7px; }
+  .slot{
+    width:100%; font-family:inherit; font-size:0.88rem; color:var(--text);
+    background:rgba(255,255,255,0.4); border:1px solid rgba(58,46,28,0.2);
+    border-radius:5px; padding:8px 10px; min-height:38px;
+  }
+  .slot::placeholder{ color:var(--text-muted); opacity:0.55; }
+  .slot:focus{ outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass); background:rgba(255,255,255,0.75); }
+  .slot:not(:placeholder-shown){ background:rgba(255,255,255,0.7); }
+
+  .coin{ display:flex; align-items:baseline; gap:9px; }
+  .coin-num{
+    font-family:'IM Fell English', Georgia, serif; font-size:1.9rem; line-height:1;
+    color:var(--brass-deep); font-variant-numeric:tabular-nums;
+  }
+  .coin-label{ font-size:0.88rem; color:var(--text-muted); }
+  .coin-actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .btn.small{ font-size:0.84rem; padding:8px 14px; min-height:38px; }
+
   /* ---------- the derived readouts ---------- */
   .sline{ display:flex; align-items:flex-start; gap:14px; padding:10px 0; }
   .sline + .sline{ border-top:1px solid rgba(58,46,28,0.12); }
@@ -369,31 +395,57 @@
 
   /* ---------- narrow screens: nav becomes a top rail ---------- */
   @media (max-width:900px){
-    .app{ flex-direction:column; gap:0; padding:0 16px 48px; }
+    /* stretch, not flex-start: as a column the base rule would size every
+       child to its own content and push the page wider than the screen */
+    .app{ flex-direction:column; align-items:stretch; gap:0; padding:0 14px 48px; }
     /* the sidebar's children join the page flow so only the nav rail stays sticky */
     .sidebar{ display:contents; }
-    .sidebar h1{ order:1; font-size:1.35rem; padding-top:20px; }
+    .sidebar h1{ order:1; font-size:1.3rem; padding-top:18px; }
     .sidebar .tagline{ display:none; }
-    .sync{ order:2; margin-top:8px; }
+    .sync{ order:2; margin-top:7px; }
+    /* a thin rail, pinned to the top of the screen, scrolled sideways */
     .side-scroll{
-      order:3; position:sticky; top:0; z-index:10;
-      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.15);
-      margin:12px -16px 0; padding:8px 16px;
-      overflow-x:auto; overflow-y:hidden;
+      order:3; position:sticky; top:0; z-index:20;
+      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.18);
+      box-shadow:0 6px 12px -8px rgba(0,0,0,0.9);
+      margin:10px -14px 0; padding:0 14px;
+      overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
     }
-    nav.side{ flex-direction:row; gap:4px; }
+    .side-scroll::-webkit-scrollbar{ display:none; }
+    nav.side{ flex-direction:row; gap:2px; }
     .nav-item{
-      width:auto; flex:0 0 auto; gap:8px;
+      width:auto; flex:0 0 auto; gap:6px; font-size:0.82rem; padding:6px 9px;
       border-left:none; border-bottom:2px solid transparent;
-      border-radius:5px 5px 0 0; white-space:nowrap; padding:7px 10px;
+      border-radius:4px 4px 0 0; white-space:nowrap;
     }
+    .nav-count{ font-size:0.7rem; }
     .nav-item.active{ border-left-color:transparent; border-bottom-color:var(--brass); }
-    main{ order:4; padding-top:16px; }
+    /* jumping to a section must clear the rail */
+    section.building{ scroll-margin-top:46px; }
+    main{ order:4; padding-top:14px; }
     .side-foot{
       order:5; flex-direction:row; align-items:center; flex-wrap:wrap; gap:16px;
       margin-top:20px; padding-top:14px;
     }
-    .ledger{ padding:2px 16px 8px; }
+    .ledger{ padding:2px 14px 8px; }
+  }
+
+  @media (max-width:640px){
+    /* the rack and the credit line reclaim the checkbox column */
+    .panel{ margin-left:0; }
+    .slots{ grid-template-columns:1fr; }
+    .slot{ font-size:16px; }   /* 16px keeps iOS from zooming on focus */
+    .credit{ margin-left:34px; }
+    .sline-top{ flex-wrap:wrap; }
+  }
+
+  @media (max-width:380px){
+    .app{ padding:0 10px 40px; }
+    .side-scroll{ margin:10px -10px 0; padding:0 10px; }
+    .ledger{ padding:2px 12px 8px; }
+    .building-head h2{ font-size:1.25rem; }
+    .row-main{ gap:11px; }
   }
 </style>
 </head>
@@ -439,6 +491,22 @@
     <span class="toast-track"><span class="toast-bar"></span></span>
   </div>
 
+  <dialog class="namer" id="coin" aria-labelledby="coin-title">
+    <form class="sheet" id="coin-form" method="dialog">
+      <h3 id="coin-title">Deposit</h3>
+      <label class="prompt" for="coin-input">How much gold?</label>
+      <input id="coin-input" class="code" type="text" inputmode="numeric" autocomplete="off"
+             maxlength="9" pattern="[0-9]*" enterkeyhint="done" />
+      <div class="namer-foot">
+        <span class="counter" id="coin-note"></span>
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="coin-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="coin-ok">Deposit</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="namer" id="dmgate" aria-labelledby="dmgate-title">
     <form class="sheet" id="dmgate-form" method="dialog">
       <h3 id="dmgate-title">DM mode</h3>
@@ -471,7 +539,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAEyiHPo3hgKjJCeeNuEbe8SOnXd5xl_dk",
@@ -501,6 +569,9 @@
        needsAny  [ids] at least ONE must be checked
        replaces  id of the upgrade this supersedes - once this is
                  built, that older row disappears from the ledger
+       panel     'armory' or 'chest' - hangs the shared rack or the coin
+                 chest under this row. Every item in a chain carries the
+                 same panel name, so the contents survive the upgrade.
        global    true = never superseded (the Lumber Mill and the
                  Blacksmith keep their row once bought)
        always    true = never hidden; a locked one is shown greyed out
@@ -588,13 +659,13 @@
     { id:'warehouse', title:'Warehouse', intro:null, gate:'bld-warehouse',
       groups:[
         { label:'Coin', items:[
-          { id:'improvised-chest', name:'Improvised Chest', desc:'Can deposit coins for other future adventurers to use as they wish.', cost:'10g', needs:['bld-warehouse'] },
-          { id:'enchanted-chest', name:'Enchanted Chest', desc:'Can deposit coins for other future adventurers. When making a deposit, you can enchant those coins to only be taken out by a specific player, for a specific purpose, or other stipulation.', cost:'100g', by:'a sorcerer, wizard, warlock, or artificer', needs:['improvised-chest','lumber-mill'], replaces:'improvised-chest' },
+          { id:'improvised-chest', name:'Improvised Chest', desc:'Can deposit coins for other future adventurers to use as they wish.', cost:'10g', needs:['bld-warehouse'], panel:'chest' },
+          { id:'enchanted-chest', name:'Enchanted Chest', desc:'Can deposit coins for other future adventurers. When making a deposit, you can enchant those coins to only be taken out by a specific player, for a specific purpose, or other stipulation.', cost:'100g', by:'a sorcerer, wizard, warlock, or artificer', needs:['improvised-chest','lumber-mill'], replaces:'improvised-chest', panel:'chest' },
           { id:'marble-piggy', name:'Marble Piggy', desc:"Any player can deposit coins inside. Each session the amount inside grows by 10%, though you can't see how much is in there. Any two adventurers may put their strength together and smash it whenever they want.", cost:'50g', by:'a paladin or cleric', needs:['bld-warehouse'] }
         ]},
         { label:'Gear', items:[
-          { id:'improvised-armory', name:'Improvised Armory', desc:'Can deposit non-magical items, pieces of armor, and weapons for other adventurers to use as they wish.', cost:'20g', needs:['bld-warehouse'] },
-          { id:'arcane-armory', name:'Arcane Armory', desc:'Can now deposit magical items that do not require attunement.', cost:'200g', needs:['improvised-armory','lumber-mill'], replaces:'improvised-armory' }
+          { id:'improvised-armory', name:'Improvised Armory', desc:'Can deposit non-magical items, pieces of armor, and weapons for other adventurers to use as they wish.', cost:'20g', needs:['bld-warehouse'], panel:'armory' },
+          { id:'arcane-armory', name:'Arcane Armory', desc:'Can now deposit magical items that do not require attunement.', cost:'200g', needs:['improvised-armory','lumber-mill'], replaces:'improvised-armory', panel:'armory' }
         ]},
         { label:'Knowledge', items:[
           { id:'communal-tome', name:'Communal Tome', desc:'Wizards can write down spells in this tome, which can then be copied by other (future) wizards.', cost:'200g', by:'a wizard', needs:['bld-warehouse','lumber-mill'] }
@@ -768,6 +839,8 @@
 
   let state = {};      // id -> true, the checkmarks
   let builders = {};   // id -> who built it
+  let rack = {};       // slot number -> what is on the rack
+  let coin = 0;        // gold in the chest
   let pendingId = null;
   const openState = {};
   // (SECTIONS is built further down, so this runs over DATA and the two
@@ -825,6 +898,30 @@
       + '<button type="button" class="credit" data-edit="' + it.id + '" hidden>'
         + SEAL_SVG + '<span class="credit-text"></span>'
       + '</button>'
+      + (it.panel ? renderPanel(it) : '')
+      + '</div>';
+  }
+
+  // Both rows of a chain render their own copy; only the live one is shown,
+  // and both are kept filled so an upgrade changes nothing on screen.
+  function renderPanel(it){
+    if(it.panel === 'armory'){
+      let slots = '';
+      for(let i = 1; i <= 10; i++){
+        slots += '<input class="slot" type="text" maxlength="60" data-slot="' + i + '"'
+          + ' placeholder="' + i + '" aria-label="Rack slot ' + i + '" />';
+      }
+      return '<div class="panel" data-panel="armory" hidden>'
+        + '<div class="panel-head">On the racks</div>'
+        + '<div class="slots">' + slots + '</div>'
+        + '</div>';
+    }
+    return '<div class="panel" data-panel="chest" hidden>'
+      + '<div class="coin"><span class="coin-num">0</span><span class="coin-label">gold in the chest</span></div>'
+      + '<div class="coin-actions">'
+        + '<button type="button" class="btn ghost small" data-coin="deposit">Deposit</button>'
+        + '<button type="button" class="btn ghost small" data-coin="withdraw">Withdraw</button>'
+      + '</div>'
       + '</div>';
   }
 
@@ -920,6 +1017,9 @@
       if(pendingId !== it.id) cb.checked = built;   // don't fight the open dialog
       cb.disabled = locked && !dmMode;              // the DM may reach past the prerequisites
 
+      const panel = row.querySelector('.panel');
+      if(panel) panel.hidden = !built || !!sup;
+
       const credit = row.querySelector('.credit');
       const who = builders[it.id];
       credit.hidden = !built;
@@ -961,10 +1061,21 @@
       }
     });
 
+    applyPanels();
     applySummaries();
 
     const done = ALL_IDS.filter(isBuilt).length;
     document.getElementById('progress-stat').textContent = done + ' of ' + ALL_IDS.length + ' upgrades built';
+  }
+
+  // Contents live under one name per chain, so they carry across upgrades.
+  function applyPanels(){
+    document.querySelectorAll('.slot').forEach(el => {
+      if(el === document.activeElement) return;   // never overwrite what someone is typing
+      const v = rack['s' + el.dataset.slot] || '';
+      if(el.value !== v) el.value = v;
+    });
+    document.querySelectorAll('.coin-num').forEach(el => { el.textContent = coin.toLocaleString(); });
   }
 
   // The readouts: for each entry show the best tier the guild has built.
@@ -1045,6 +1156,17 @@
       builders = snapshot.val() || {};
       applyState();
     }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/rack'), snapshot => {
+      rack = snapshot.val() || {};
+      applyPanels();
+    }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/chest'), snapshot => {
+      const v = snapshot.val();
+      coin = (v && typeof v.gold === 'number') ? v.gold : 0;
+      applyPanels();
+    }, () => setSync('error'));
   }
 
   // One update writes the checkmark and the builder together, so the party
@@ -1055,6 +1177,22 @@
     payload['checks/' + id] = checked ? true : null;
     payload['builders/' + id] = (checked && name) ? name : null;
     update(ref(db, 'guildhallLedger'), payload).catch(() => setSync('error'));
+  }
+
+  function writeSlot(n, text){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/rack/s' + n), text ? text.slice(0, 60) : null)
+      .catch(() => setSync('error'));
+  }
+
+  // A transaction, because two heroes raiding the chest at once should not
+  // be able to spend the same coins twice.
+  function moveCoin(delta){
+    if(!db) return;
+    runTransaction(ref(db, 'guildhallLedger/chest'), current => {
+      const have = (current && typeof current.gold === 'number') ? current.gold : 0;
+      return { gold: Math.max(0, have + delta) };
+    }).catch(() => setSync('error'));
   }
 
   // Only reachable from Destroy the Guild, behind DM mode and today's word.
@@ -1263,8 +1401,61 @@
     if(remembered === todaysCode()) setDm(true);
   }
 
+  /* ---------- the rack and the chest ---------- */
+  const coinDialog = document.getElementById('coin');
+  const coinInput = document.getElementById('coin-input');
+  let coinMode = 'deposit';
+
+  function openCoin(mode){
+    coinMode = mode;
+    const title = mode === 'deposit' ? 'Deposit' : 'Withdraw';
+    document.getElementById('coin-title').textContent = title;
+    document.getElementById('coin-ok').textContent = title;
+    document.getElementById('coin-note').textContent = coin.toLocaleString() + 'g in the chest';
+    coinInput.value = '';
+    if(typeof coinDialog.showModal === 'function') coinDialog.showModal();
+    else coinDialog.setAttribute('open', '');
+    setTimeout(() => coinInput.focus(), 40);
+  }
+
+  function closeCoin(){
+    if(coinDialog.open) coinDialog.close(); else coinDialog.removeAttribute('open');
+  }
+
+  function setupVault(){
+    const timers = {};
+    document.getElementById('ledger').addEventListener('input', e => {
+      const slot = e.target.closest('.slot');
+      if(!slot) return;
+      const n = slot.dataset.slot;
+      clearTimeout(timers[n]);   // settle for a moment before telling the party
+      timers[n] = setTimeout(() => writeSlot(n, slot.value.trim()), 400);
+    });
+    document.getElementById('ledger').addEventListener('blur', e => {
+      const slot = e.target.closest && e.target.closest('.slot');
+      if(!slot) return;
+      clearTimeout(timers[slot.dataset.slot]);
+      writeSlot(slot.dataset.slot, slot.value.trim());
+    }, true);
+
+    coinInput.addEventListener('input', () => {
+      coinInput.value = coinInput.value.replace(/\D/g, '').slice(0, 9);
+    });
+    document.getElementById('coin-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const amount = parseInt(coinInput.value, 10);
+      if(amount > 0) moveCoin(coinMode === 'deposit' ? amount : -amount);
+      closeCoin();
+    });
+    document.getElementById('coin-cancel').addEventListener('click', closeCoin);
+    coinDialog.addEventListener('cancel', e => { e.preventDefault(); closeCoin(); });
+    coinDialog.addEventListener('click', e => { if(e.target === coinDialog) closeCoin(); });
+  }
+
   function setupInteractions(){
     document.getElementById('ledger').addEventListener('click', e => {
+      const coinBtn = e.target.closest('[data-coin]');
+      if(coinBtn){ openCoin(coinBtn.dataset.coin); return; }
       const credit = e.target.closest('.credit');
       if(credit){ openNamer(credit.dataset.edit, 'edit'); return; }
       const head = e.target.closest('.building-head');
@@ -1340,6 +1531,7 @@
   function init(){
     buildStaticDOM();
     setupNamer();
+    setupVault();
     setupDmGate();
     setupInteractions();
     setupNavHighlight();
@@ -1361,7 +1553,9 @@
     DATA, ITEM, needsMet, supersededBy,
     get state(){ return state; }, set state(v){ state = v; applyState(); },
     get builders(){ return builders; }, set builders(v){ builders = v; applyState(); },
-    get dmMode(){ return dmMode; }, todaysCode
+    get dmMode(){ return dmMode; }, todaysCode,
+    get rack(){ return rack; }, set rack(v){ rack = v; applyPanels(); },
+    get coin(){ return coin; }, set coin(v){ coin = v; applyPanels(); }
   };
 </script>
 </body>
