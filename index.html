@@ -92,6 +92,38 @@
   .toggle input:checked + .track .knob{ transform:translateX(13px); background:var(--brass); }
   .toggle input:focus-visible + .track{ outline:2px solid var(--verdigris); outline-offset:2px; }
 
+  /* ---------- DM mode ---------- */
+  .dm-row{
+    width:100%; margin-top:4px; padding-top:12px;
+    border-top:1px solid rgba(233,223,196,0.15);
+    display:flex; flex-direction:column; gap:6px; align-items:flex-start;
+  }
+  .toggle.dm input:checked + .track{ background:rgba(93,124,108,0.45); border-color:var(--verdigris); }
+  .toggle.dm input:checked + .track .knob{ background:var(--verdigris); }
+  body.dm .toggle.dm{ color:var(--text-on-ink); }
+  .dm-badge{
+    font-size:0.74rem; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--verdigris); border:1px solid rgba(93,124,108,0.5);
+    border-radius:999px; padding:3px 9px;
+  }
+  .dm-badge[hidden]{ display:none; }
+  body.dm .ledger{ box-shadow:0 0 0 2px var(--verdigris), 0 12px 30px rgba(0,0,0,0.35); }
+
+  .sheet input.code{
+    font-size:26px; letter-spacing:0.45em; text-indent:0.45em;
+    text-align:center; font-variant-numeric:tabular-nums;
+  }
+  .sheet.shake{ animation:shake .3s ease; }
+  @keyframes shake{
+    0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); }
+    40%{ transform:translateX(7px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(4px); }
+  }
+  .sheet .code{ margin-top:16px; }
+  .sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;
+  }
+
   .link-btn{
     background:none; border:none; padding:0; color:var(--text-on-ink-muted);
     font:inherit; font-size:0.8rem; text-decoration:underline; cursor:pointer;
@@ -127,7 +159,13 @@
 
   .building-body{ display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease; }
   .building.collapsed .building-body{ grid-template-rows:0fr; }
-  .building-inner{ overflow:hidden; }
+  .building-inner{
+    overflow:hidden;
+    /* This box has to clip for the collapse animation, so it reaches 10px
+       wider than the rows and pads the content back into place - otherwise
+       the focus ring around a stamp gets shaved off at the left edge. */
+    margin:0 -10px; padding:0 10px;
+  }
   .building-inner > .pad{ padding-bottom:14px; }
 
   .intro{ margin:0 0 4px; color:var(--text-muted); font-size:0.9rem; max-width:58ch; }
@@ -203,6 +241,32 @@
   .chip.superseded{ border-color:rgba(58,46,28,0.22); font-style:italic; }
   .row:not(.superseded) .chip.superseded{ display:none; }
 
+  /* ---------- the derived readouts ---------- */
+  .sline{ display:flex; align-items:flex-start; gap:14px; padding:10px 0; }
+  .sline + .sline{ border-top:1px solid rgba(58,46,28,0.12); }
+  .sline.off{ display:none; }
+  body.reveal .sline.off{ display:flex; opacity:0.5; }
+  .sline-mark{ width:24px; flex-shrink:0; display:flex; justify-content:center; margin-top:7px; }
+  .sline-mark::before{
+    content:''; width:8px; height:8px; background:var(--brass); transform:rotate(45deg);
+  }
+  .sline.off .sline-mark::before{ background:none; border:1px solid rgba(58,46,28,0.4); }
+  .sline-text{ flex:1; min-width:0; }
+  .sline-top{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .sline-label{ font-weight:600; font-size:0.98rem; }
+  .sline-src{ font-size:0.82rem; color:var(--text-muted); white-space:nowrap; flex-shrink:0; }
+  .sline-desc{ display:block; margin-top:2px; font-size:0.9rem; color:var(--text-muted); }
+
+  .wakeup-count{ display:flex; align-items:baseline; gap:12px; margin:10px 0 6px; }
+  .wakeup-num{
+    font-family:'IM Fell English', Georgia, serif; font-size:2.4rem; line-height:1;
+    color:var(--brass-deep); min-width:1.2em; text-align:center;
+  }
+  .wakeup-label{ font-size:0.95rem; color:var(--text); }
+  .wakeup-label small{ display:block; font-size:0.82rem; color:var(--text-muted); }
+  .summary-empty{ margin:6px 0 2px; font-size:0.88rem; font-style:italic; color:var(--text-muted); }
+  .summary-empty[hidden]{ display:none; }
+
   /* ---------- who built it ---------- */
   .credit{
     display:inline-flex; align-items:center; gap:6px;
@@ -218,6 +282,9 @@
   .credit[hidden]{ display:none; }
 
   dialog.namer{
+    /* pinned to the viewport - without explicit insets a margin:0 dialog falls
+       back to its static position and lands off-screen on a scrolled page */
+    position:fixed; inset:0;
     width:100vw; max-width:100vw; height:100dvh; max-height:100dvh;
     margin:0; padding:0; border:none; background:transparent; overflow:hidden;
   }
@@ -347,6 +414,15 @@
         </label>
         <button class="link-btn" id="collapse-btn" type="button">Collapse all</button>
         <button class="link-btn" id="reset-btn" type="button">Reset the ledger</button>
+
+        <div class="dm-row">
+          <label class="toggle dm">
+            <input type="checkbox" id="dm-toggle" />
+            <span class="track"><span class="knob"></span></span>
+            <span>DM mode</span>
+          </label>
+          <span class="dm-badge" id="dm-badge" hidden>Building as &ldquo;A Higher Hand&rdquo;</span>
+        </div>
       </div>
     </aside>
 
@@ -359,6 +435,21 @@
     <span class="toast-text"></span>
     <span class="toast-track"><span class="toast-bar"></span></span>
   </div>
+
+  <dialog class="namer" id="dmgate" aria-labelledby="dmgate-title">
+    <form class="sheet" id="dmgate-form" method="dialog">
+      <h3 id="dmgate-title">DM mode</h3>
+      <input id="dmgate-input" class="code" type="text" inputmode="numeric" autocomplete="off"
+             maxlength="4" pattern="[0-9]*" enterkeyhint="go" aria-label="Code" />
+      <span class="sr-only" id="dmgate-live" role="status" aria-live="polite"></span>
+      <div class="namer-foot">
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="dmgate-cancel">Cancel</button>
+          <button type="submit" class="btn primary">Enter</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
 
   <dialog class="namer" id="namer" aria-labelledby="namer-title">
     <form class="sheet" id="namer-form" method="dialog">
@@ -560,6 +651,80 @@
     }
   ];
 
+  /* ==============================================================
+     THE DERIVED SECTIONS
+
+     Nothing here is checked off. Each entry watches a chain of
+     upgrades and shows the best one the guild has actually built,
+     so these two sections are always a readout of what the party
+     can do tonight. tiers run weakest first - the last built one wins.
+     ============================================================== */
+  const SUMMARY = [
+    { id:'resting', title:'Resting Bonuses', kind:'summary',
+      intro:'What a long rest at the guild is worth right now.',
+      entries:[
+        { label:'Safe sleep', tiers:[
+          { id:'stack-of-hay', text:'No risk of a nightly ambush.' },
+          { id:'mahogany-beds', text:'No risk of a nightly ambush, and a real bed to show for it.' }
+        ]},
+        { label:'Exhaustion', tiers:[
+          { id:'linen-sheets', text:'\u22121 exhaustion for the night.' },
+          { id:'satin-sheets', text:'\u22122 exhaustion for the night.' },
+          { id:'heavenly-sheets', text:'\u22123 exhaustion for the night.' }
+        ]},
+        { label:'Temporary HP', tiers:[
+          { id:'fluffy-pillows', text:'+5 temp HP on waking.' },
+          { id:'duck-down-pillows', text:'+10 temp HP on waking.' },
+          { id:'cloudy-pillows', text:'+20 temp HP on waking.' }
+        ]},
+        { label:'Hit dice', tiers:[
+          { id:'carrot-stew', text:'+1 extra hit die on waking.' },
+          { id:'meaty-stew', text:'+2 extra hit dice on waking.' },
+          { id:'perfect-stew', text:'+4 extra hit dice on waking.' }
+        ]},
+        { label:'Wakeup actions', tiers:[
+          { id:'stack-of-hay', text:'One wakeup action each, after a long rest here.' },
+          { id:'mahogany-beds', text:'Two wakeup actions each, after a long rest here.' }
+        ]},
+        { label:'Away from camp', tiers:[
+          { id:'portable-tent', text:'One long rest outside camp: \u22121 exhaustion, +5 temp HP, +1 hit die.' },
+          { id:'foldable-camp', text:'One long rest outside camp: \u22122 exhaustion, +10 temp HP, +2 hit dice.' }
+        ]}
+      ]
+    },
+    { id:'wakeup', title:'Wakeup Actions', kind:'summary',
+      intro:'What a hero may spend a wakeup action on after a long rest.',
+      entries:[
+        { label:'Healing Poultice', tiers:[
+          { id:'botanical-garden', text:'Pluck herbs in the garden and grind a Healing Poultice: heals 2d4 + 2 HP. Spoils at the end of the day.' },
+          { id:'wildgrowth-glade', text:'Pluck herbs in the garden and grind a Healing Poultice: heals 4d4 + 4 HP. Spoils at the end of the day.' },
+          { id:'arcane-hydroponics-greenhouse', text:'Pluck herbs in the garden and grind a Healing Poultice: heals 8d4 + 4 HP. Spoils at the end of the day.' }
+        ]},
+        { label:'Poultice of Animal Friendship', tiers:[
+          { id:'free-roaming-ranch', text:"Grind the ranch's herbs instead of the healing ones." }
+        ]},
+        { label:'Poultice of Poison', tiers:[
+          { id:'toxic-thornbush', text:"Grind the thornbush's herbs instead of the healing ones." }
+        ]},
+        { label:'Poultice of Hill Giant Strength', tiers:[
+          { id:'lith-o-bloom', text:"Grind the lith-o-bloom's herbs instead of the healing ones." }
+        ]},
+        { label:'Combine two poultices', tiers:[
+          { id:'mixalot-cauldron', text:'Spend the single action to brew two poultices with different effects and combine them into one.' }
+        ]},
+        { label:'Ironbark resistance', tiers:[
+          { id:'ironbark-totem', text:'Touch the totem for resistance to slashing, piercing, or bludgeoning damage in your next combat encounter.' }
+        ]},
+        { label:'Buy Inspiration', tiers:[
+          { id:'font-of-inspiration', text:'Pay 50g at the font to gain Inspiration, if you have none.' }
+        ]}
+      ]
+    }
+  ];
+
+  // The guild first, then the two readouts, then the wings.
+  const SECTIONS = [DATA[0], SUMMARY[0], SUMMARY[1]].concat(DATA.slice(1));
+
   /* ---------- index ---------- */
   const ITEM = {};
   const REPLACED_BY = {};
@@ -587,11 +752,23 @@
   ];
   const randomBuilder = () => DEFAULT_BUILDERS[Math.floor(Math.random() * DEFAULT_BUILDERS.length)];
 
+  // DM mode never touches the database: it lives in this browser only, so
+  // switching it on here changes nothing for the rest of the party.
+  const HIGHER_HAND = 'A Higher Hand';
+  const DM_KEY = 'guildhall-dm';
+  let dmMode = false;
+
+  function todaysCode(){
+    const d = new Date();
+    return String(d.getDate()).padStart(2, '0') + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
   let state = {};      // id -> true, the checkmarks
   let builders = {};   // id -> who built it
   let pendingId = null;
   const openState = {};
-  DATA.forEach(b => { openState[b.id] = true; });
+  // (SECTIONS is built further down, so this runs over DATA and the two
+  // readouts are added when the DOM is built.)
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -672,15 +849,50 @@
       + '</section>';
   }
 
+  function renderSummary(sec){
+    const lines = sec.entries.map((e, i) =>
+      '<div class="sline off" data-sum="' + sec.id + '" data-entry="' + i + '">'
+        + '<span class="sline-mark"></span>'
+        + '<span class="sline-text">'
+          + '<span class="sline-top">'
+            + '<span class="sline-label">' + escapeHtml(e.label) + '</span>'
+            + '<span class="sline-src"></span>'
+          + '</span>'
+          + '<span class="sline-desc"></span>'
+        + '</span>'
+      + '</div>').join('');
+
+    const counter = sec.id === 'wakeup'
+      ? '<div class="wakeup-count"><span class="wakeup-num" id="wakeup-num">0</span>'
+        + '<span class="wakeup-label" id="wakeup-label"></span></div>'
+      : '';
+
+    return '<section class="building summary" id="b-' + sec.id + '">'
+      + '<button class="building-head" type="button" aria-expanded="true" aria-controls="body-' + sec.id + '" data-building="' + sec.id + '">'
+        + CHEV_SVG
+        + '<h2>' + escapeHtml(sec.title) + '</h2>'
+        + '<span class="count" data-count="' + sec.id + '"></span>'
+      + '</button>'
+      + '<div class="building-body" id="body-' + sec.id + '"><div class="building-inner"><div class="pad">'
+        + '<p class="intro">' + escapeHtml(sec.intro) + '</p>'
+        + counter
+        + '<p class="summary-empty" data-empty="' + sec.id + '" hidden></p>'
+        + lines
+      + '</div></div></div>'
+      + '</section>';
+  }
+
   function renderNav(){
-    return DATA.map(b => '<button class="nav-item" type="button" data-target="' + b.id + '">'
+    return SECTIONS.map(b => '<button class="nav-item" type="button" data-target="' + b.id + '">'
       + '<span>' + escapeHtml(b.title) + '</span>'
       + '<span class="nav-count" data-navcount="' + b.id + '"></span>'
       + '</button>').join('');
   }
 
   function buildStaticDOM(){
-    document.getElementById('ledger').innerHTML = DATA.map(renderBuilding).join('');
+    SECTIONS.forEach(sec => { if(openState[sec.id] === undefined) openState[sec.id] = true; });
+    document.getElementById('ledger').innerHTML =
+      SECTIONS.map(sec => sec.kind === 'summary' ? renderSummary(sec) : renderBuilding(sec)).join('');
     document.getElementById('nav').innerHTML = renderNav();
   }
 
@@ -703,7 +915,7 @@
 
       const cb = row.querySelector('.cb');
       if(pendingId !== it.id) cb.checked = built;   // don't fight the open dialog
-      cb.disabled = locked;
+      cb.disabled = locked && !dmMode;              // the DM may reach past the prerequisites
 
       const credit = row.querySelector('.credit');
       const who = builders[it.id];
@@ -746,8 +958,52 @@
       }
     });
 
+    applySummaries();
+
     const done = ALL_IDS.filter(isBuilt).length;
     document.getElementById('progress-stat').textContent = done + ' of ' + ALL_IDS.length + ' upgrades built';
+  }
+
+  // The readouts: for each entry show the best tier the guild has built.
+  function applySummaries(){
+    SUMMARY.forEach(sec => {
+      let active = 0;
+      sec.entries.forEach((e, i) => {
+        const line = document.querySelector('.sline[data-sum="' + sec.id + '"][data-entry="' + i + '"]');
+        const built = e.tiers.filter(t => isBuilt(t.id));
+        const best = built.length ? built[built.length - 1] : null;
+        const shown = best || e.tiers[0];   // locked entries preview their first tier
+        line.classList.toggle('off', !best);
+        line.querySelector('.sline-desc').textContent = shown.text;
+        line.querySelector('.sline-src').textContent = best ? nameOf(best.id) : 'Needs ' + nameOf(shown.id);
+        if(best) active++;
+      });
+
+      let wakeups = 0;
+      if(sec.id === 'wakeup'){
+        wakeups = isBuilt('mahogany-beds') ? 2 : isBuilt('stack-of-hay') ? 1 : 0;
+        document.getElementById('wakeup-num').textContent = wakeups;
+        document.getElementById('wakeup-label').innerHTML = wakeups === 1
+          ? 'wakeup action each<small>after a long rest at the guild</small>'
+          : 'wakeup actions each<small>' + (wakeups ? 'after a long rest at the guild' : 'the guild has nowhere to sleep yet') + '</small>';
+      }
+
+      const empty = document.querySelector('[data-empty="' + sec.id + '"]');
+      empty.hidden = active > 0;
+      empty.textContent = sec.id === 'wakeup'
+        ? 'Nothing to spend them on yet.'
+        : 'A long rest here is worth nothing yet.';
+
+      const el = document.getElementById('b-' + sec.id);
+      const hide = active === 0 && !(sec.id === 'wakeup' && wakeups > 0);
+      el.classList.toggle('all-hidden', hide);
+      el.querySelector('[data-count="' + sec.id + '"]').textContent = active;
+      const nav = document.querySelector('[data-target="' + sec.id + '"]');
+      if(nav){
+        nav.classList.toggle('all-hidden', hide);
+        nav.querySelector('[data-navcount="' + sec.id + '"]').textContent = active;
+      }
+    });
   }
 
   /* ---------- sync plumbing ---------- */
@@ -907,6 +1163,74 @@
     namer.addEventListener('click', e => { if(e.target === namer) closeNamer(false); });  // tap outside
   }
 
+  /* ---------- the DM's door ---------- */
+  const dmToggle = document.getElementById('dm-toggle');
+  const dmGate = document.getElementById('dmgate');
+  const dmInput = document.getElementById('dmgate-input');
+  const dmLive = document.getElementById('dmgate-live');
+
+  function setDm(on){
+    dmMode = on;
+    dmToggle.checked = on;
+    document.body.classList.toggle('dm', on);
+    document.getElementById('dm-badge').hidden = !on;
+    try{
+      if(on) localStorage.setItem(DM_KEY, todaysCode());
+      else localStorage.removeItem(DM_KEY);
+    }catch(e){ /* private windows and previews simply won't remember it */ }
+    applyState();   // locked rows become clickable, or stop being so
+  }
+
+  function openGate(){
+    dmInput.value = '';
+    dmLive.textContent = '';
+    if(typeof dmGate.showModal === 'function') dmGate.showModal();
+    else dmGate.setAttribute('open', '');
+    setTimeout(() => dmInput.focus(), 40);
+  }
+
+  function closeGate(){
+    if(dmGate.open) dmGate.close(); else dmGate.removeAttribute('open');
+    if(!dmMode) dmToggle.checked = false;   // the switch only sticks once the word is right
+  }
+
+  function setupDmGate(){
+    dmInput.addEventListener('input', () => {
+      dmInput.value = dmInput.value.replace(/\D/g, '').slice(0, 4);
+      dmLive.textContent = '';
+    });
+
+    document.getElementById('dmgate-form').addEventListener('submit', e => {
+      e.preventDefault();
+      if(dmInput.value === todaysCode()){
+        setDm(true);
+        closeGate();
+      } else {
+        // A shake and nothing else - the door gives no hints away.
+        dmLive.textContent = 'Incorrect';
+        const sheet = dmGate.querySelector('.sheet');
+        sheet.classList.remove('shake');
+        void sheet.offsetWidth;
+        sheet.classList.add('shake');
+        dmInput.select();
+      }
+    });
+
+    document.getElementById('dmgate-cancel').addEventListener('click', closeGate);
+    dmGate.addEventListener('cancel', e => { e.preventDefault(); closeGate(); });
+    dmGate.addEventListener('click', e => { if(e.target === dmGate) closeGate(); });
+
+    dmToggle.addEventListener('change', () => {
+      if(dmToggle.checked) openGate();
+      else setDm(false);
+    });
+
+    // Remembered only for today - the word changes at midnight, and so does this.
+    let remembered = null;
+    try{ remembered = localStorage.getItem(DM_KEY); }catch(e){}
+    if(remembered === todaysCode()) setDm(true);
+  }
+
   function setupInteractions(){
     document.getElementById('ledger').addEventListener('click', e => {
       const credit = e.target.closest('.credit');
@@ -922,9 +1246,16 @@
       if(!cb.classList || !cb.classList.contains('cb')) return;
       const id = cb.dataset.id;
       // Ticking asks who built it first; the write happens when that is answered.
-      if(cb.checked){ openNamer(id, 'check'); return; }
-      // Unticking is guarded: the first tap only arms it, a second one within
-      // a second goes through and clears the builder's name with it.
+      // In DM mode it just happens, signed by a higher hand.
+      if(cb.checked){
+        if(dmMode){ disarm(); writeItem(id, true, HIGHER_HAND); }
+        else openNamer(id, 'check');
+        return;
+      }
+      // The DM tears things down with one click; nobody's hard work is safe.
+      if(dmMode){ disarm(); writeItem(id, false, null); return; }
+      // For everyone else unticking is guarded: the first tap only arms it, a
+      // second one within a second goes through and clears the name with it.
       if(armedId === id){
         disarm();
         writeItem(id, false, null);
@@ -948,8 +1279,8 @@
     });
 
     document.getElementById('collapse-btn').addEventListener('click', () => {
-      const anyOpen = DATA.some(b => openState[b.id]);
-      DATA.forEach(b => setOpen(b.id, !anyOpen));
+      const anyOpen = SECTIONS.some(b => openState[b.id]);
+      SECTIONS.forEach(b => setOpen(b.id, !anyOpen));
       syncCollapseBtn();
     });
 
@@ -961,13 +1292,13 @@
   }
 
   function syncCollapseBtn(){
-    const anyOpen = DATA.some(b => openState[b.id]);
+    const anyOpen = SECTIONS.some(b => openState[b.id]);
     document.getElementById('collapse-btn').textContent = anyOpen ? 'Collapse all' : 'Expand all';
   }
 
   function setupNavHighlight(){
     const buttons = Array.from(document.querySelectorAll('.nav-item'));
-    const sections = DATA.map(b => document.getElementById('b-' + b.id)).filter(Boolean);
+    const sections = SECTIONS.map(b => document.getElementById('b-' + b.id)).filter(Boolean);
     const io = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if(entry.isIntersecting){
@@ -982,6 +1313,7 @@
   function init(){
     buildStaticDOM();
     setupNamer();
+    setupDmGate();
     setupInteractions();
     setupNavHighlight();
     syncCollapseBtn();
@@ -1001,7 +1333,8 @@
   window.__ledger = {
     DATA, ITEM, needsMet, supersededBy,
     get state(){ return state; }, set state(v){ state = v; applyState(); },
-    get builders(){ return builders; }, set builders(v){ builders = v; applyState(); }
+    get builders(){ return builders; }, set builders(v){ builders = v; applyState(); },
+    get dmMode(){ return dmMode; }, todaysCode
   };
 </script>
 </body>
