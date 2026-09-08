@@ -239,6 +239,7 @@
     color:var(--text); background:rgba(255,255,255,0.5);
     border:1px solid rgba(58,46,28,0.35); border-radius:5px; padding:11px 12px;
   }
+  .sheet input::placeholder{ color:var(--text-muted); opacity:0.65; }
   .sheet input:focus{ outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass); }
   .namer-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; flex-wrap:wrap; }
   .counter{ font-size:0.78rem; color:var(--text-muted); font-variant-numeric:tabular-nums; }
@@ -256,6 +257,35 @@
   @media (max-width:420px){
     .namer-actions{ width:100%; }
     .namer-actions .btn{ flex:1; }
+  }
+
+  /* ---------- "are you sure" toast ---------- */
+  .toast{
+    position:fixed; z-index:60; left:50%; bottom:28px; transform:translateX(-50%);
+    width:min(620px, calc(100vw - 24px));
+    background:var(--parchment); color:var(--text);
+    border:1px solid var(--brass-deep); border-radius:10px;
+    box-shadow:0 16px 44px rgba(0,0,0,0.5);
+    padding:20px 24px 16px; font-size:1.05rem; line-height:1.45;
+    animation:toast-in .18s ease-out;
+  }
+  .toast[hidden]{ display:none; }
+  .toast .toast-text{ display:block; }
+  .toast.spent .toast-text{ color:var(--text-muted); font-style:italic; font-size:0.95rem; }
+  .toast-track{
+    height:4px; margin-top:14px; border-radius:2px;
+    background:rgba(58,46,28,0.15); overflow:hidden;
+  }
+  .toast-bar{
+    display:block; height:100%; background:var(--brass);
+    transform-origin:left center; animation:drain 1s linear forwards;
+  }
+  .toast.spent .toast-track{ opacity:0.35; }
+  @keyframes drain{ from{ transform:scaleX(1); } to{ transform:scaleX(0); } }
+  @keyframes toast-in{ from{ opacity:0; transform:translate(-50%, 10px); } to{ opacity:1; transform:translate(-50%, 0); } }
+  @media (max-width:640px){
+    .toast{ bottom:12px; padding:14px 16px 11px; font-size:0.95rem; border-radius:8px; }
+    .toast-track{ margin-top:10px; }
   }
 
   .guildhall .row-name{ font-size:1.05rem; }
@@ -325,11 +355,16 @@
     </main>
   </div>
 
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <span class="toast-text"></span>
+    <span class="toast-track"><span class="toast-bar"></span></span>
+  </div>
+
   <dialog class="namer" id="namer" aria-labelledby="namer-title">
     <form class="sheet" id="namer-form" method="dialog">
       <h3 id="namer-title"></h3>
       <label class="prompt" for="namer-input">What noble adventurer(s) have built this?</label>
-      <input id="namer-input" type="text" maxlength="100" autocomplete="off" enterkeyhint="done" placeholder="e.g. Kaelen &amp; Mira Thornwood" />
+      <input id="namer-input" type="text" maxlength="100" autocomplete="off" enterkeyhint="done" />
       <div class="namer-foot">
         <span class="counter" id="namer-count">0/100</span>
         <span class="namer-actions">
@@ -543,6 +578,14 @@
 
   const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg>';
   const CHEV_SVG = '<svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6,9 12,15 18,9"/></svg>';
+
+  // Shown greyed out behind an empty field, as a hint of what belongs there.
+  // Nothing is recorded unless someone actually types a name.
+  const DEFAULT_BUILDERS = [
+    'Joardyn Boombeard', 'Bandobras Broadleaf', 'Gretch the Ogre', "Cap'n Morgan",
+    'Andrew Legelstein', 'Herbert the Miller', 'Lex, the Law'
+  ];
+  const randomBuilder = () => DEFAULT_BUILDERS[Math.floor(Math.random() * DEFAULT_BUILDERS.length)];
 
   let state = {};      // id -> true, the checkmarks
   let builders = {};   // id -> who built it
@@ -781,10 +824,12 @@
   }
 
   function openNamer(id, mode){
+    disarm();
     pendingId = id;
     namer.dataset.mode = mode;
     document.getElementById('namer-title').textContent = ITEM[id].name;
     namerInput.value = (builders[id] || '').slice(0, 100);
+    namerInput.placeholder = randomBuilder();   // a different ghost name each time
     updateCount();
     if(typeof namer.showModal === 'function') namer.showModal();
     else namer.setAttribute('open', '');
@@ -801,6 +846,51 @@
       const cb = document.querySelector('.cb[data-id="' + id + '"]');
       if(cb) cb.checked = !!state[id];   // roll the tick back, nothing was written
     }
+  }
+
+  /* ---------- unticking takes two taps within a second ---------- */
+  const toast = document.getElementById('toast');
+  const toastText = toast.querySelector('.toast-text');
+  let armedId = null;
+  let armTimer = null;    // the 1s window in which a second click lands
+  let toastTimer = null;  // the 5s the message stays readable
+
+  function hideToast(){
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer = null;
+    toast.hidden = true;
+    toast.classList.remove('spent');
+  }
+
+  function disarm(){
+    if(armTimer) clearTimeout(armTimer);
+    armTimer = null; armedId = null;
+    hideToast();
+  }
+
+  function armUncheck(id){
+    if(armTimer) clearTimeout(armTimer);
+    if(toastTimer) clearTimeout(toastTimer);
+    armedId = id;
+    const who = builders[id] || 'the guild';
+
+    toast.classList.remove('spent');
+    toastText.textContent =
+      'Click the upgrade again if you truly want to destroy the hard work of ' + who + '...';
+    toast.hidden = false;
+    const bar = toast.querySelector('.toast-bar');   // restart the one-second bar
+    bar.style.animation = 'none';
+    void bar.offsetWidth;
+    bar.style.animation = '';
+
+    // The second click only counts for a second. The message then says so
+    // rather than sitting there inviting a click that no longer does anything.
+    armTimer = setTimeout(() => {
+      armTimer = null; armedId = null;
+      toast.classList.add('spent');
+      toastText.textContent = 'The moment passed \u2014 ' + who + "'s work still stands.";
+    }, 1000);
+    toastTimer = setTimeout(hideToast, 5000);
   }
 
   function setupNamer(){
@@ -830,10 +920,18 @@
     document.getElementById('ledger').addEventListener('change', e => {
       const cb = e.target;
       if(!cb.classList || !cb.classList.contains('cb')) return;
+      const id = cb.dataset.id;
       // Ticking asks who built it first; the write happens when that is answered.
-      // Unticking clears the name with it.
-      if(cb.checked) openNamer(cb.dataset.id, 'check');
-      else writeItem(cb.dataset.id, false, null);
+      if(cb.checked){ openNamer(id, 'check'); return; }
+      // Unticking is guarded: the first tap only arms it, a second one within
+      // a second goes through and clears the builder's name with it.
+      if(armedId === id){
+        disarm();
+        writeItem(id, false, null);
+      } else {
+        cb.checked = true;
+        armUncheck(id);
+      }
     });
 
     document.getElementById('nav').addEventListener('click', e => {
