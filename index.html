@@ -129,6 +129,9 @@
     font:inherit; font-size:0.8rem; text-decoration:underline; cursor:pointer;
   }
   .link-btn:hover{ color:var(--brass); }
+  .link-btn.danger{ color:#a15c3f; }
+  .link-btn.danger:hover{ color:#c2704b; }
+  .link-btn[hidden]{ display:none; }
   button:focus-visible, .nav-item:focus-visible, label:focus-within .stamp{
     outline:2px solid var(--verdigris); outline-offset:2px;
   }
@@ -413,7 +416,6 @@
           <span>Show locked &amp; replaced</span>
         </label>
         <button class="link-btn" id="collapse-btn" type="button">Collapse all</button>
-        <button class="link-btn" id="reset-btn" type="button">Reset the ledger</button>
 
         <div class="dm-row">
           <label class="toggle dm">
@@ -422,6 +424,7 @@
             <span>DM mode</span>
           </label>
           <span class="dm-badge" id="dm-badge" hidden>Building as &ldquo;A Higher Hand&rdquo;</span>
+          <button class="link-btn danger" id="destroy-btn" type="button" hidden>Destroy the Guild</button>
         </div>
       </div>
     </aside>
@@ -1054,6 +1057,7 @@
     update(ref(db, 'guildhallLedger'), payload).catch(() => setSync('error'));
   }
 
+  // Only reachable from Destroy the Guild, behind DM mode and today's word.
   function resetAll(){
     if(!db) return;
     set(ref(db, 'guildhallLedger'), null).catch(() => setSync('error'));
@@ -1124,6 +1128,18 @@
     hideToast();
   }
 
+  // A plain message, with no second-click window attached to it.
+  function flashToast(msg, ms){
+    if(armTimer) clearTimeout(armTimer);
+    if(toastTimer) clearTimeout(toastTimer);
+    armTimer = null; armedId = null;
+    toast.classList.remove('spent');
+    toastText.textContent = msg;
+    toast.querySelector('.toast-track').hidden = true;
+    toast.hidden = false;
+    toastTimer = setTimeout(hideToast, ms || 4000);
+  }
+
   function armUncheck(id){
     if(armTimer) clearTimeout(armTimer);
     if(toastTimer) clearTimeout(toastTimer);
@@ -1134,6 +1150,7 @@
     toastText.textContent =
       'Click the upgrade again if you truly want to destroy the hard work of ' + who + '...';
     toast.hidden = false;
+    toast.querySelector('.toast-track').hidden = false;
     const bar = toast.querySelector('.toast-bar');   // restart the one-second bar
     bar.style.animation = 'none';
     void bar.offsetWidth;
@@ -1168,12 +1185,15 @@
   const dmGate = document.getElementById('dmgate');
   const dmInput = document.getElementById('dmgate-input');
   const dmLive = document.getElementById('dmgate-live');
+  const destroyBtn = document.getElementById('destroy-btn');
+  let gateMode = 'unlock';
 
   function setDm(on){
     dmMode = on;
     dmToggle.checked = on;
     document.body.classList.toggle('dm', on);
     document.getElementById('dm-badge').hidden = !on;
+    destroyBtn.hidden = !on;   // the guild can only be razed from inside DM mode
     try{
       if(on) localStorage.setItem(DM_KEY, todaysCode());
       else localStorage.removeItem(DM_KEY);
@@ -1181,7 +1201,10 @@
     applyState();   // locked rows become clickable, or stop being so
   }
 
-  function openGate(){
+  function openGate(mode){
+    gateMode = mode || 'unlock';
+    document.getElementById('dmgate-title').textContent =
+      gateMode === 'destroy' ? 'Destroy the Guild' : 'DM mode';
     dmInput.value = '';
     dmLive.textContent = '';
     if(typeof dmGate.showModal === 'function') dmGate.showModal();
@@ -1191,7 +1214,8 @@
 
   function closeGate(){
     if(dmGate.open) dmGate.close(); else dmGate.removeAttribute('open');
-    if(!dmMode) dmToggle.checked = false;   // the switch only sticks once the word is right
+    // the switch only sticks once the word is right
+    if(gateMode === 'unlock' && !dmMode) dmToggle.checked = false;
   }
 
   function setupDmGate(){
@@ -1203,8 +1227,15 @@
     document.getElementById('dmgate-form').addEventListener('submit', e => {
       e.preventDefault();
       if(dmInput.value === todaysCode()){
-        setDm(true);
-        closeGate();
+        if(gateMode === 'destroy'){
+          const razed = ALL_IDS.filter(isBuilt).length;
+          resetAll();
+          closeGate();
+          flashToast('The guild is ashes. ' + razed + ' upgrade' + (razed === 1 ? '' : 's') + ' undone.', 5000);
+        } else {
+          setDm(true);
+          closeGate();
+        }
       } else {
         // A shake and nothing else - the door gives no hints away.
         dmLive.textContent = 'Incorrect';
@@ -1216,12 +1247,13 @@
       }
     });
 
+    destroyBtn.addEventListener('click', () => { if(dmMode) openGate('destroy'); });
     document.getElementById('dmgate-cancel').addEventListener('click', closeGate);
     dmGate.addEventListener('cancel', e => { e.preventDefault(); closeGate(); });
     dmGate.addEventListener('click', e => { if(e.target === dmGate) closeGate(); });
 
     dmToggle.addEventListener('change', () => {
-      if(dmToggle.checked) openGate();
+      if(dmToggle.checked) openGate('unlock');
       else setDm(false);
     });
 
@@ -1284,11 +1316,6 @@
       syncCollapseBtn();
     });
 
-    document.getElementById('reset-btn').addEventListener('click', () => {
-      if(confirm('This clears every checkmark and builder name on the ledger for the whole party. Are you sure?')){
-        resetAll();
-      }
-    });
   }
 
   function syncCollapseBtn(){
