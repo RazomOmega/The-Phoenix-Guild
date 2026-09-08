@@ -151,13 +151,12 @@
   }
 
   /* ---------- rows ---------- */
-  .row{
-    display:flex; align-items:flex-start; gap:14px;
-    padding:10px 0; cursor:pointer;
-  }
+  .row{ display:block; padding:10px 0; }
+  .row-main{ display:flex; align-items:flex-start; gap:14px; cursor:pointer; }
   .row + .row{ border-top:1px solid rgba(58,46,28,0.12); }
   .row.hidden{ display:none; }
-  body.reveal .row.hidden{ display:flex; }
+  body.reveal .row.hidden{ display:block; }
+  .row.locked .row-main{ cursor:not-allowed; }
   body.reveal .row.locked{ opacity:0.5; cursor:not-allowed; }
   .row.locked.always{ opacity:0.5; cursor:not-allowed; }
   body.reveal .row.superseded{ opacity:0.55; }
@@ -203,6 +202,61 @@
   .chip.superseded[hidden]{ display:none; }
   .chip.superseded{ border-color:rgba(58,46,28,0.22); font-style:italic; }
   .row:not(.superseded) .chip.superseded{ display:none; }
+
+  /* ---------- who built it ---------- */
+  .credit{
+    display:inline-flex; align-items:center; gap:6px;
+    margin:6px 0 0 38px; padding:4px 8px 4px 6px; min-height:30px;
+    background:none; border:1px dashed transparent; border-radius:5px;
+    font:inherit; font-size:0.83rem; color:var(--brass-deep); cursor:pointer; text-align:left;
+  }
+  .credit:hover{ border-color:rgba(176,129,46,0.5); background:rgba(176,129,46,0.08); }
+  .credit svg{ flex-shrink:0; opacity:0.8; }
+  .credit .credit-text{ font-style:italic; }
+  .credit.empty{ color:var(--text-muted); }
+  .credit.empty .credit-text{ font-style:normal; opacity:0.75; }
+  .credit[hidden]{ display:none; }
+
+  dialog.namer{
+    width:100vw; max-width:100vw; height:100dvh; max-height:100dvh;
+    margin:0; padding:0; border:none; background:transparent; overflow:hidden;
+  }
+  dialog.namer::backdrop{ background:rgba(18,12,6,0.7); }
+  .sheet{
+    width:min(430px, calc(100vw - 28px));
+    margin:clamp(20px, 9vh, 110px) auto 0;
+    background:var(--parchment); color:var(--text);
+    border-radius:8px; padding:20px 20px 16px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.5);
+  }
+  .sheet h3{
+    font-family:'IM Fell English', Georgia, serif; font-weight:400;
+    font-size:1.3rem; margin:0;
+  }
+  .sheet .prompt{ margin:10px 0 10px; font-size:0.92rem; color:var(--text-muted); }
+  .sheet input{
+    width:100%; font-family:inherit; font-size:16px; /* 16px keeps iOS from zooming */
+    color:var(--text); background:rgba(255,255,255,0.5);
+    border:1px solid rgba(58,46,28,0.35); border-radius:5px; padding:11px 12px;
+  }
+  .sheet input:focus{ outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass); }
+  .namer-foot{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; flex-wrap:wrap; }
+  .counter{ font-size:0.78rem; color:var(--text-muted); font-variant-numeric:tabular-nums; }
+  .counter.near{ color:var(--rust); }
+  .namer-actions{ display:flex; gap:8px; margin-left:auto; }
+  .btn{
+    font:inherit; font-size:0.88rem; padding:9px 16px; min-height:40px;
+    border-radius:5px; cursor:pointer; border:1px solid var(--brass-deep);
+  }
+  .btn.ghost{ background:none; color:var(--text-muted); border-color:rgba(58,46,28,0.3); }
+  .btn.ghost:hover{ color:var(--text); border-color:rgba(58,46,28,0.55); }
+  .btn.primary{ background:var(--brass); border-color:var(--brass-deep); color:#2a1f0c; font-weight:600; }
+  .btn.primary:hover{ background:var(--brass-deep); color:var(--parchment); }
+
+  @media (max-width:420px){
+    .namer-actions{ width:100%; }
+    .namer-actions .btn{ flex:1; }
+  }
 
   .guildhall .row-name{ font-size:1.05rem; }
 
@@ -271,9 +325,24 @@
     </main>
   </div>
 
+  <dialog class="namer" id="namer" aria-labelledby="namer-title">
+    <form class="sheet" id="namer-form" method="dialog">
+      <h3 id="namer-title"></h3>
+      <label class="prompt" for="namer-input">What noble adventurer(s) have built this?</label>
+      <input id="namer-input" type="text" maxlength="100" autocomplete="off" enterkeyhint="done" placeholder="e.g. Kaelen &amp; Mira Thornwood" />
+      <div class="namer-foot">
+        <span class="counter" id="namer-count">0/100</span>
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="namer-cancel">Cancel</button>
+          <button type="submit" class="btn primary">Save</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAEyiHPo3hgKjJCeeNuEbe8SOnXd5xl_dk",
@@ -469,10 +538,15 @@
 
   const nameOf = id => (ITEM[id] ? ITEM[id].name : id);
 
+  const SEAL_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + '<circle cx="12" cy="8" r="5"/><polyline points="8.5,12.5 7,22 12,19 17,22 15.5,12.5"/></svg>';
+
   const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg>';
   const CHEV_SVG = '<svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6,9 12,15 18,9"/></svg>';
 
-  let state = {};
+  let state = {};      // id -> true, the checkmarks
+  let builders = {};   // id -> who built it
+  let pendingId = null;
   const openState = {};
   DATA.forEach(b => { openState[b.id] = true; });
 
@@ -496,7 +570,7 @@
   /* ---------- render ---------- */
   function renderChips(it){
     let out = '';
-    if(it.by) out += '<span class="chip by">Built by ' + escapeHtml(it.by) + '</span>';
+    if(it.by) out += '<span class="chip by">Requires ' + escapeHtml(it.by) + '</span>';
     if(it.note) out += '<span class="chip note">' + escapeHtml(it.note) + '</span>';
     (it.needs || []).forEach(n => {
       const isUpgrade = n === it.replaces;
@@ -512,18 +586,23 @@
   }
 
   function renderRow(it){
-    return '<label class="row' + (it.always ? ' always' : '') + '" data-id="' + it.id + '">'
-      + '<input class="cb" type="checkbox" data-id="' + it.id + '" />'
-      + '<span class="stamp">' + CHECK_SVG + '</span>'
-      + '<span class="row-text">'
-        + '<span class="row-top">'
-          + '<span class="row-name">' + escapeHtml(it.name) + '</span>'
-          + (it.cost ? '<span class="row-cost">' + escapeHtml(it.cost) + '</span>' : '')
+    return '<div class="row' + (it.always ? ' always' : '') + '" data-id="' + it.id + '">'
+      + '<label class="row-main">'
+        + '<input class="cb" type="checkbox" data-id="' + it.id + '" />'
+        + '<span class="stamp">' + CHECK_SVG + '</span>'
+        + '<span class="row-text">'
+          + '<span class="row-top">'
+            + '<span class="row-name">' + escapeHtml(it.name) + '</span>'
+            + (it.cost ? '<span class="row-cost">' + escapeHtml(it.cost) + '</span>' : '')
+          + '</span>'
+          + (it.desc ? '<span class="row-desc">' + escapeHtml(it.desc) + '</span>' : '')
+          + renderChips(it)
         + '</span>'
-        + (it.desc ? '<span class="row-desc">' + escapeHtml(it.desc) + '</span>' : '')
-        + renderChips(it)
-      + '</span>'
-      + '</label>';
+      + '</label>'
+      + '<button type="button" class="credit" data-edit="' + it.id + '" hidden>'
+        + SEAL_SVG + '<span class="credit-text"></span>'
+      + '</button>'
+      + '</div>';
   }
 
   function renderGroup(g){
@@ -580,8 +659,15 @@
       row.classList.toggle('hidden', (!!sup || locked) && !it.always);
 
       const cb = row.querySelector('.cb');
-      cb.checked = built;
+      if(pendingId !== it.id) cb.checked = built;   // don't fight the open dialog
       cb.disabled = locked;
+
+      const credit = row.querySelector('.credit');
+      const who = builders[it.id];
+      credit.hidden = !built;
+      credit.classList.toggle('empty', !who);
+      credit.querySelector('.credit-text').textContent = who ? 'Built by ' + who : 'Name the builders';
+      credit.setAttribute('aria-label', (who ? 'Built by ' + who + '. ' : '') + 'Edit who built ' + it.name);
 
       const supChip = row.querySelector('.chip.superseded');
       if(sup){ supChip.textContent = 'Replaced by ' + nameOf(sup); supChip.hidden = false; }
@@ -652,16 +738,26 @@
       state = snapshot.val() || {};
       applyState();
     }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/builders'), snapshot => {
+      builders = snapshot.val() || {};
+      applyState();
+    }, () => setSync('error'));
   }
 
-  function writeItem(id, checked){
+  // One update writes the checkmark and the builder together, so the party
+  // never sees a built upgrade with a stale name on it.
+  function writeItem(id, checked, name){
     if(!db) return;
-    set(ref(db, 'guildhallLedger/checks/' + id), checked).catch(() => setSync('error'));
+    const payload = {};
+    payload['checks/' + id] = checked ? true : null;
+    payload['builders/' + id] = (checked && name) ? name : null;
+    update(ref(db, 'guildhallLedger'), payload).catch(() => setSync('error'));
   }
 
   function resetAll(){
     if(!db) return;
-    set(checksRef, {}).catch(() => setSync('error'));
+    set(ref(db, 'guildhallLedger'), null).catch(() => setSync('error'));
   }
 
   /* ---------- interactions ---------- */
@@ -672,8 +768,59 @@
     sec.querySelector('.building-head').setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  /* ---------- "who built this?" ---------- */
+  const namer = document.getElementById('namer');
+  const namerForm = document.getElementById('namer-form');
+  const namerInput = document.getElementById('namer-input');
+  const namerCount = document.getElementById('namer-count');
+
+  function updateCount(){
+    const n = namerInput.value.length;
+    namerCount.textContent = n + '/100';
+    namerCount.classList.toggle('near', n >= 90);
+  }
+
+  function openNamer(id, mode){
+    pendingId = id;
+    namer.dataset.mode = mode;
+    document.getElementById('namer-title').textContent = ITEM[id].name;
+    namerInput.value = (builders[id] || '').slice(0, 100);
+    updateCount();
+    if(typeof namer.showModal === 'function') namer.showModal();
+    else namer.setAttribute('open', '');
+    // a beat before focusing, so the dialog is painted and mobile keyboards behave
+    setTimeout(() => { namerInput.focus(); namerInput.select(); }, 40);
+  }
+
+  function closeNamer(saved){
+    const id = pendingId;
+    const mode = namer.dataset.mode;
+    pendingId = null;
+    if(namer.open) namer.close(); else namer.removeAttribute('open');
+    if(!saved && mode === 'check' && id){
+      const cb = document.querySelector('.cb[data-id="' + id + '"]');
+      if(cb) cb.checked = !!state[id];   // roll the tick back, nothing was written
+    }
+  }
+
+  function setupNamer(){
+    namerInput.addEventListener('input', updateCount);
+    namerForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const id = pendingId;
+      if(!id) return;
+      writeItem(id, true, namerInput.value.trim().slice(0, 100));
+      closeNamer(true);
+    });
+    document.getElementById('namer-cancel').addEventListener('click', () => closeNamer(false));
+    namer.addEventListener('cancel', e => { e.preventDefault(); closeNamer(false); });   // Escape
+    namer.addEventListener('click', e => { if(e.target === namer) closeNamer(false); });  // tap outside
+  }
+
   function setupInteractions(){
     document.getElementById('ledger').addEventListener('click', e => {
+      const credit = e.target.closest('.credit');
+      if(credit){ openNamer(credit.dataset.edit, 'edit'); return; }
       const head = e.target.closest('.building-head');
       if(!head) return;
       setOpen(head.dataset.building, !openState[head.dataset.building]);
@@ -683,8 +830,10 @@
     document.getElementById('ledger').addEventListener('change', e => {
       const cb = e.target;
       if(!cb.classList || !cb.classList.contains('cb')) return;
-      // Write to Firebase and let the listener push the new state back to everyone, us included.
-      writeItem(cb.dataset.id, cb.checked);
+      // Ticking asks who built it first; the write happens when that is answered.
+      // Unticking clears the name with it.
+      if(cb.checked) openNamer(cb.dataset.id, 'check');
+      else writeItem(cb.dataset.id, false, null);
     });
 
     document.getElementById('nav').addEventListener('click', e => {
@@ -707,7 +856,7 @@
     });
 
     document.getElementById('reset-btn').addEventListener('click', () => {
-      if(confirm('This clears every checkmark on the ledger for the whole party. Are you sure?')){
+      if(confirm('This clears every checkmark and builder name on the ledger for the whole party. Are you sure?')){
         resetAll();
       }
     });
@@ -734,6 +883,7 @@
 
   function init(){
     buildStaticDOM();
+    setupNamer();
     setupInteractions();
     setupNavHighlight();
     syncCollapseBtn();
@@ -750,7 +900,11 @@
   init();
 
   // exposed so the gating rules can be checked without a database
-  window.__ledger = { DATA, ITEM, get state(){ return state; }, set state(v){ state = v; applyState(); }, needsMet, supersededBy };
+  window.__ledger = {
+    DATA, ITEM, needsMet, supersededBy,
+    get state(){ return state; }, set state(v){ state = v; applyState(); },
+    get builders(){ return builders; }, set builders(v){ builders = v; applyState(); }
+  };
 </script>
 </body>
 </html>
