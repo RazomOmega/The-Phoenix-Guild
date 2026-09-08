@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The Guildhall Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink:#221a10;
+    --ink-2:#2b2114;
+    --parchment:#efe4c6;
+    --parchment-edge:#e2d3aa;
+    --brass:#b0812e;
+    --brass-deep:#8a651f;
+    --verdigris:#5d7c6c;
+    --rust:#8a4b34;
+    --text:#3a2e1c;
+    --text-muted:#7a6b4d;
+    --text-on-ink:#e9dfc4;
+    --text-on-ink-muted:#b6a985;
+    --radius:6px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition-duration:0.001ms !important; animation-duration:0.001ms !important; }
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--ink);
+    color:var(--text-on-ink);
+    font-family:'Inter', -apple-system, sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  h1,h2{ font-family:'IM Fell English', Georgia, serif; font-weight:400; margin:0; }
+
+  /* ---------- shell ---------- */
+  .app{
+    display:flex; align-items:flex-start; gap:34px;
+    max-width:1180px; margin:0 auto; padding:0 24px 72px;
+  }
+
+  /* ---------- left navigation ---------- */
+  .sidebar{
+    position:sticky; top:0; z-index:10;
+    flex:0 0 246px; width:246px; height:100vh;
+    display:flex; flex-direction:column;
+    padding:34px 0 22px;
+  }
+  .sidebar h1{ font-size:1.45rem; line-height:1.2; }
+  .sidebar .tagline{
+    margin:8px 0 0; font-size:0.83rem; color:var(--text-on-ink-muted); max-width:30ch;
+  }
+  .sync{ font-size:0.78rem; color:var(--text-on-ink-muted); display:flex; align-items:center; gap:6px; margin-top:14px; }
+  .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--verdigris); flex-shrink:0; }
+  .sync.error .sync-dot{ background:#a15c3f; }
+
+  .side-scroll{ flex:1; overflow-y:auto; margin-top:20px; padding-right:4px; }
+  .side-scroll::-webkit-scrollbar{ width:6px; }
+  .side-scroll::-webkit-scrollbar-thumb{ background:rgba(233,223,196,0.15); border-radius:3px; }
+
+  nav.side{ display:flex; flex-direction:column; gap:1px; }
+  .nav-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    width:100%; background:none; border:none; border-left:2px solid transparent;
+    color:var(--text-on-ink-muted); font:inherit; font-size:0.9rem;
+    padding:8px 10px; border-radius:0 5px 5px 0; cursor:pointer; text-align:left;
+  }
+  .nav-item:hover{ color:var(--text-on-ink); background:rgba(233,223,196,0.06); }
+  .nav-item.active{ color:var(--brass); border-left-color:var(--brass); background:rgba(176,129,46,0.12); }
+  .nav-count{ font-size:0.75rem; font-variant-numeric:tabular-nums; opacity:0.75; flex-shrink:0; }
+
+  .side-foot{ margin-top:16px; padding-top:14px; border-top:1px solid rgba(233,223,196,0.15); display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+  .stat{ font-size:0.8rem; color:var(--text-on-ink-muted); }
+
+  .toggle{ display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--text-on-ink-muted); cursor:pointer; }
+  .toggle input{ position:absolute; opacity:0; width:0; height:0; }
+  .track{
+    width:30px; height:17px; border-radius:999px; flex-shrink:0;
+    border:1px solid rgba(233,223,196,0.35); background:rgba(0,0,0,0.25);
+    position:relative; transition:background .2s ease, border-color .2s ease;
+  }
+  .knob{
+    position:absolute; top:2px; left:2px; width:11px; height:11px; border-radius:50%;
+    background:var(--text-on-ink-muted); transition:transform .2s ease, background .2s ease;
+  }
+  .toggle input:checked + .track{ background:rgba(176,129,46,0.35); border-color:var(--brass); }
+  .toggle input:checked + .track .knob{ transform:translateX(13px); background:var(--brass); }
+  .toggle input:focus-visible + .track{ outline:2px solid var(--verdigris); outline-offset:2px; }
+
+  .link-btn{
+    background:none; border:none; padding:0; color:var(--text-on-ink-muted);
+    font:inherit; font-size:0.8rem; text-decoration:underline; cursor:pointer;
+  }
+  .link-btn:hover{ color:var(--brass); }
+  button:focus-visible, .nav-item:focus-visible, label:focus-within .stamp{
+    outline:2px solid var(--verdigris); outline-offset:2px;
+  }
+
+  /* ---------- ledger ---------- */
+  main{ flex:1; min-width:0; padding:34px 0 0; }
+  .ledger{
+    background:var(--parchment);
+    color:var(--text);
+    border-radius:var(--radius);
+    box-shadow:0 1px 0 rgba(0,0,0,0.4), 0 12px 30px rgba(0,0,0,0.35);
+    padding:2px 30px 10px;
+  }
+
+  section.building + section.building{ border-top:1px solid var(--parchment-edge); }
+
+  .building-head{
+    display:flex; align-items:center; gap:12px; width:100%;
+    background:none; border:none; padding:20px 0 12px;
+    font:inherit; color:inherit; text-align:left; cursor:pointer;
+  }
+  .building-head h2{ font-size:1.5rem; flex:1; }
+  .building-head .count{
+    font-size:0.78rem; color:var(--text-muted); font-variant-numeric:tabular-nums; flex-shrink:0;
+  }
+  .chev{ flex-shrink:0; color:var(--brass-deep); transition:transform .25s ease; }
+  .building.collapsed .chev{ transform:rotate(-90deg); }
+
+  .building-body{ display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease; }
+  .building.collapsed .building-body{ grid-template-rows:0fr; }
+  .building-inner{ overflow:hidden; }
+  .building-inner > .pad{ padding-bottom:14px; }
+
+  .intro{ margin:0 0 4px; color:var(--text-muted); font-size:0.9rem; max-width:58ch; }
+
+  .group{ margin-top:14px; }
+  .group-label{
+    font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--text-muted); margin-bottom:2px;
+  }
+  .group.all-hidden{ display:none; }
+  body.reveal .group.all-hidden{ display:block; }
+
+  .empty-note{
+    display:none; font-size:0.88rem; font-style:italic; color:var(--text-muted); padding:2px 0 6px;
+  }
+  .building.all-hidden .empty-note{ display:block; }
+  body.reveal .empty-note{ display:none; }
+
+  /* ---------- rows ---------- */
+  .row{
+    display:flex; align-items:flex-start; gap:14px;
+    padding:10px 0; cursor:pointer;
+  }
+  .row + .row{ border-top:1px solid rgba(58,46,28,0.12); }
+  .row.hidden{ display:none; }
+  body.reveal .row.hidden{ display:flex; }
+  body.reveal .row.locked{ opacity:0.5; cursor:not-allowed; }
+  body.reveal .row.superseded{ opacity:0.55; }
+  body.reveal .row.superseded .row-name{ text-decoration:line-through; text-decoration-color:rgba(58,46,28,0.4); }
+
+  input.cb{ position:absolute; opacity:0; width:26px; height:26px; margin:0; cursor:pointer; }
+  .stamp{
+    position:relative; flex-shrink:0;
+    width:24px; height:24px; margin-top:2px;
+    border-radius:50%; border:2px solid var(--brass-deep);
+    transition:background .2s ease, border-color .2s ease, transform .15s ease;
+  }
+  .row.locked .stamp{ border-color:rgba(58,46,28,0.35); border-style:dashed; }
+  input.cb:checked + .stamp{ background:var(--brass); border-color:var(--brass-deep); border-style:solid; transform:scale(1.05); }
+  .stamp svg{
+    position:absolute; inset:0; margin:auto; width:14px; height:14px;
+    opacity:0; transition:opacity .15s ease;
+  }
+  input.cb:checked + .stamp svg{ opacity:1; }
+
+  .row-text{ flex:1; min-width:0; }
+  .row-top{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .row-name{ font-weight:600; font-size:0.98rem; }
+  .row-cost{ font-size:0.85rem; color:var(--text-muted); white-space:nowrap; flex-shrink:0; font-variant-numeric:tabular-nums; }
+  .row-desc{ margin-top:2px; font-size:0.9rem; color:var(--text-muted); }
+
+  /* ---------- constraint chips (next to the cost) ---------- */
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+  .chips:empty{ display:none; }
+  .chip{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:0.75rem; line-height:1.5; padding:2px 9px;
+    border:1px solid rgba(58,46,28,0.22); border-radius:999px;
+    color:var(--text-muted); background:rgba(255,255,255,0.25);
+  }
+  .chip.by{ border-color:rgba(93,124,108,0.45); color:#4a6657; }
+  .chip.note{ border-color:rgba(93,124,108,0.45); color:#4a6657; }
+  .chip.upgrade{ border-color:rgba(176,129,46,0.55); color:var(--brass-deep); }
+  .chip.need{ display:none; }
+  .chip.need.upgrade{ display:inline-flex; }
+  .chip.need.unmet{ border-color:rgba(138,75,52,0.45); color:var(--rust); }
+  .row.locked .chip.need{ display:inline-flex; }
+  .chip.superseded[hidden]{ display:none; }
+  .chip.superseded{ border-color:rgba(58,46,28,0.22); font-style:italic; }
+  .row:not(.superseded) .chip.superseded{ display:none; }
+
+  .guildhall .row-name{ font-size:1.05rem; }
+
+  .setup-banner{
+    background:rgba(176,129,46,0.15); border:1px solid var(--brass);
+    color:var(--text-on-ink); border-radius:var(--radius);
+    padding:14px 16px; font-size:0.9rem; margin-bottom:18px;
+  }
+  .setup-banner code{ background:rgba(0,0,0,0.3); padding:1px 5px; border-radius:3px; font-size:0.85em; }
+
+  /* ---------- narrow screens: nav becomes a top rail ---------- */
+  @media (max-width:900px){
+    .app{ flex-direction:column; gap:0; padding:0 16px 48px; }
+    /* the sidebar's children join the page flow so only the nav rail stays sticky */
+    .sidebar{ display:contents; }
+    .sidebar h1{ order:1; font-size:1.35rem; padding-top:20px; }
+    .sidebar .tagline{ display:none; }
+    .sync{ order:2; margin-top:8px; }
+    .side-scroll{
+      order:3; position:sticky; top:0; z-index:10;
+      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.15);
+      margin:12px -16px 0; padding:8px 16px;
+      overflow-x:auto; overflow-y:hidden;
+    }
+    nav.side{ flex-direction:row; gap:4px; }
+    .nav-item{
+      width:auto; flex:0 0 auto; gap:8px;
+      border-left:none; border-bottom:2px solid transparent;
+      border-radius:5px 5px 0 0; white-space:nowrap; padding:7px 10px;
+    }
+    .nav-item.active{ border-left-color:transparent; border-bottom-color:var(--brass); }
+    main{ order:4; padding-top:16px; }
+    .side-foot{
+      order:5; flex-direction:row; align-items:center; flex-wrap:wrap; gap:16px;
+      margin-top:20px; padding-top:14px;
+    }
+    .ledger{ padding:2px 16px 8px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>The Guildhall Ledger</h1>
+      <p class="tagline">A shared record of what the guild has built.</p>
+      <span class="sync" id="sync-status"><span class="sync-dot"></span><span class="sync-text">Connecting&hellip;</span></span>
+
+      <div class="side-scroll">
+        <nav class="side" id="nav"></nav>
+      </div>
+
+      <div class="side-foot">
+        <span class="stat" id="progress-stat">&nbsp;</span>
+        <label class="toggle">
+          <input type="checkbox" id="reveal-toggle" />
+          <span class="track"><span class="knob"></span></span>
+          <span>Show locked &amp; replaced</span>
+        </label>
+        <button class="link-btn" id="collapse-btn" type="button">Collapse all</button>
+        <button class="link-btn" id="reset-btn" type="button">Reset the ledger</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="ledger" id="ledger"></div>
+    </main>
+  </div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAEyiHPo3hgKjJCeeNuEbe8SOnXd5xl_dk",
+    authDomain: "the-phoenix-guild.firebaseapp.com",
+    projectId: "the-phoenix-guild",
+    storageBucket: "the-phoenix-guild.firebasestorage.app",
+    databaseURL: "https://the-phoenix-guild-default-rtdb.europe-west1.firebasedatabase.app",
+    messagingSenderId: "100512499882",
+    appId: "1:100512499882:web:769412b5b8f3088cb428d3"
+  };
+
+  const NEEDS_SETUP = !firebaseConfig.apiKey || firebaseConfig.apiKey.indexOf('PASTE') !== -1;
+
+  /* ==============================================================
+     THE LEDGER DATA
+
+     Every upgrade is one object. Fields:
+
+       id        stable key used by the database - never change it
+       name      shown in bold
+       desc      what it does
+       cost      gold, shown on the right of the row
+       by        who has to build it -> chip: "Built by an artificer"
+       note      any other constraint, free text -> its own chip
+                 e.g. note:'Only during a full moon'
+       needs     [ids] ALL must be checked before this appears
+       needsAny  [ids] at least ONE must be checked
+       replaces  id of the upgrade this supersedes - once this is
+                 built, that older row disappears from the ledger
+       global    true = never hidden and never superseded
+                 (the Lumber Mill and the Blacksmith)
+
+     'lumber-mill' and 'blacksmith' are ordinary ids, so a tier gate
+     is just another entry in needs.
+     ============================================================== */
+  const DATA = [
+    { id:'guildhall', title:'The Guildhall', intro:'Guild-wide works. Most of the finer upgrades below lean on these two.',
+      groups:[
+        { label:null, guildhall:true, items:[
+          { id:'lumber-mill', name:'Lumber Mill', desc:'Unlocks a sturdier tier of upgrades across the guildhall.', cost:'', global:true },
+          { id:'blacksmith', name:'Blacksmith', desc:'Unlocks the finest tier of upgrades across the guildhall.', cost:'', global:true }
+        ]}
+      ]
+    },
+
+    { id:'inn', title:'Phoenix Inn', intro:null,
+      groups:[
+        { label:'Foundations', items:[
+          { id:'stack-of-hay', name:'Stack of Hay', desc:'You can sleep safely, without the risk of a nightly ambush. Each player gets one wakeup action after taking a long rest here.', cost:'10g' }
+        ]},
+        { label:'Bedding', items:[
+          { id:'linen-sheets', name:'Linen Sheets', desc:'-1 exhaustion per night.', cost:'30g', needs:['stack-of-hay'] },
+          { id:'satin-sheets', name:'Satin Sheets', desc:'-2 exhaustion per night.', cost:'50g', needs:['linen-sheets','lumber-mill'], replaces:'linen-sheets' },
+          { id:'heavenly-sheets', name:'Heavenly Sheets', desc:'-3 exhaustion per night.', cost:'800g', needs:['satin-sheets','blacksmith'], replaces:'satin-sheets' },
+          { id:'fluffy-pillows', name:'Fluffy Pillows', desc:'+5 temp HP after sleeping.', cost:'30g', needs:['stack-of-hay'] },
+          { id:'duck-down-pillows', name:'Duck Down Pillows', desc:'+10 temp HP after sleeping.', cost:'150g', needs:['fluffy-pillows','lumber-mill'], replaces:'fluffy-pillows' },
+          { id:'cloudy-pillows', name:'Cloudy Pillows', desc:'+20 temp HP after sleeping.', cost:'1000g', needs:['duck-down-pillows','blacksmith'], replaces:'duck-down-pillows' }
+        ]},
+        { label:'The kitchen', items:[
+          { id:'carrot-stew', name:'Carrot Stew', desc:'+1 extra hit die after sleeping.', cost:'30g', needs:['stack-of-hay'] },
+          { id:'meaty-stew', name:'Meaty Stew', desc:'+2 extra hit dice after sleeping.', cost:'150g', needs:['carrot-stew','lumber-mill'], replaces:'carrot-stew' },
+          { id:'perfect-stew', name:'Perfect Stew', desc:'+4 extra hit dice after sleeping.', cost:'2000g', needs:['meaty-stew','blacksmith'], replaces:'meaty-stew' }
+        ]},
+        { label:'Away from camp', items:[
+          { id:'portable-tent', name:'Portable Tent', desc:'Can take 1 long rest outside camp, with the effects of Linen Sheets, Fluffy Pillows, and Carrot Stew.', cost:'400g', needs:['linen-sheets','fluffy-pillows','carrot-stew','lumber-mill'] },
+          { id:'foldable-camp', name:'Foldable Camp', desc:'Can take 1 long rest outside camp, with the effects of Satin Sheets, Duck Down Pillows, and Meaty Stew.', cost:'5000g', needs:['portable-tent','satin-sheets','duck-down-pillows','meaty-stew','blacksmith'], replaces:'portable-tent' }
+        ]}
+      ]
+    },
+
+    { id:'tavern', title:'Ashfall Tavern', intro:null,
+      groups:[
+        { label:'Who you can recruit', items:[
+          { id:'ruins-of-ales-past', name:'Ruins of Ales Past', desc:'Can recruit Fighters, Rangers, and Rogues.', cost:'Free' },
+          { id:'holy-icon', name:'Holy Icon', desc:'Can recruit Clerics and Paladins.', cost:'', needs:['ruins-of-ales-past'] },
+          { id:'eldritch-idol', name:'Eldritch Idol', desc:'Can recruit Warlocks.', cost:'', needs:['ruins-of-ales-past'] },
+          { id:'totemic-lodestone', name:'Totemic Lodestone', desc:'Can recruit Druids and Barbarians.', cost:'', needs:['ruins-of-ales-past'] },
+          { id:'singing-bowl', name:'Singing Bowl', desc:'Can recruit Bards and Monks.', cost:'', needs:['ruins-of-ales-past'] },
+          { id:'arcane-orrery', name:'Arcane Orrery', desc:'Can recruit Wizards and Sorcerers.', cost:'', needs:['ruins-of-ales-past'] },
+          { id:'intricate-mechanism', name:'Intricate Mechanism', desc:'Can recruit Artificers.', cost:'', needs:['ruins-of-ales-past'] }
+        ]},
+        { label:'How high you can recruit', items:[
+          { id:'ruins-of-tales-past', name:'Ruins of Tales Past', desc:'Can recruit level 1 newcomers.', cost:'Free' },
+          { id:'creaky-bar', name:'Creaky Bar', desc:'Can recruit level 2 newcomers.', cost:'100g', needs:['ruins-of-tales-past'], replaces:'ruins-of-tales-past' },
+          { id:'unstable-barstools', name:'Unstable Barstools', desc:'Can recruit level 3 newcomers.', cost:'300g', needs:['creaky-bar'], replaces:'creaky-bar' },
+          { id:'comfortable-chairs', name:'Comfortable Chairs', desc:'Can recruit level 4 newcomers.', cost:'1000g', needs:['unstable-barstools','lumber-mill'], replaces:'unstable-barstools' },
+          { id:'ornamental-windows', name:'Ornamental Windows', desc:'Can recruit level 5 newcomers.', cost:'3000g', needs:['comfortable-chairs'], replaces:'comfortable-chairs' },
+          { id:'mahogany-floorboards', name:'Mahogany Floorboards', desc:'Can recruit level 6 newcomers.', cost:'10000g', needs:['ornamental-windows'], replaces:'ornamental-windows' },
+          { id:'automated-taps', name:'Automated Taps', desc:'Can recruit level 7 newcomers.', cost:'15000g', needs:['mahogany-floorboards','blacksmith'], replaces:'mahogany-floorboards' },
+          { id:'acoustic-optimization', name:'Acoustic Optimization', desc:'Can recruit level 8 newcomers.', cost:'30000g', needs:['automated-taps'], replaces:'automated-taps' },
+          { id:'automated-bouncer-bot', name:'Automated Bouncer-Bot', desc:'Can recruit level 9 newcomers.', cost:'50000g', needs:['acoustic-optimization'], replaces:'acoustic-optimization' }
+        ]}
+      ]
+    },
+
+    { id:'workshop', title:'The Workshop', intro:null,
+      groups:[
+        { label:'Constructs', items:[
+          { id:'modular-barrelbot', name:'Modular Barrelbot', desc:'The Guild gains access to a modular construct controlled by the party. Develop and swap out its modules to suit the needs of your current mission.', cost:'50g', by:'an artificer' }
+        ]},
+        { label:'Weapon work', items:[
+          { id:'belt-driven-whetstone', name:'Belt-Driven Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +1.', cost:'200g', by:'an artificer' },
+          { id:'self-turning-whetstone', name:'Self-Turning Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +2.', cost:'600g', by:'an artificer', needs:['belt-driven-whetstone','lumber-mill'], replaces:'belt-driven-whetstone' },
+          { id:'arcane-whetstone', name:'Arcane Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +3.', cost:'2000g', by:'an artificer and a wizard', needs:['self-turning-whetstone','blacksmith'], replaces:'self-turning-whetstone' }
+        ]},
+        { label:'Armour work', items:[
+          { id:'weakpoint-searching-pliers', name:'Weakpoint-Searching Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +1.', cost:'300g', by:'an artificer' },
+          { id:'weakpoint-detection-pliers', name:'Weakpoint Detection Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +2.', cost:'1000g', by:'an artificer', needs:['weakpoint-searching-pliers','lumber-mill'], replaces:'weakpoint-searching-pliers' },
+          { id:'animated-pliers', name:'Animated Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +3.', cost:'3500g', by:'an artificer and a wizard', needs:['weakpoint-detection-pliers','blacksmith'], replaces:'weakpoint-detection-pliers' }
+        ]}
+      ]
+    },
+
+    { id:'storage', title:'Storage', intro:null,
+      groups:[
+        { label:'Coin', items:[
+          { id:'improvised-chest', name:'Improvised Chest', desc:'Can deposit coins for other future adventurers to use as they wish.', cost:'10g' },
+          { id:'enchanted-chest', name:'Enchanted Chest', desc:'Can deposit coins for other future adventurers. When making a deposit, you can enchant those coins to only be taken out by a specific player, for a specific purpose, or other stipulation.', cost:'100g', by:'a sorcerer, wizard, warlock, or artificer', needs:['improvised-chest','lumber-mill'], replaces:'improvised-chest' },
+          { id:'marble-piggy', name:'Marble Piggy', desc:"Any player can deposit coins inside. Each session the amount inside grows by 10%, though you can't see how much is in there. Any two adventurers may put their strength together and smash it whenever they want.", cost:'50g', by:'a paladin or cleric' }
+        ]},
+        { label:'Gear', items:[
+          { id:'improvised-armory', name:'Improvised Armory', desc:'Can deposit non-magical items, pieces of armor, and weapons for other adventurers to use as they wish.', cost:'20g' },
+          { id:'arcane-armory', name:'Arcane Armory', desc:'Can now deposit magical items that do not require attunement.', cost:'200g', needs:['improvised-armory','lumber-mill'], replaces:'improvised-armory' }
+        ]},
+        { label:'Knowledge', items:[
+          { id:'communal-tome', name:'Communal Tome', desc:'Wizards can write down spells in this tome, which can then be copied by other (future) wizards.', cost:'200g', by:'a wizard', needs:['lumber-mill'] }
+        ]}
+      ]
+    },
+
+    { id:'altar', title:'The Altar', intro:null,
+      groups:[
+        { label:'Offerings', items:[
+          { id:'improvised-collection-bowl', name:'Improvised Collection Bowl', desc:"Commoners visit the Guild on their travels and might leave a small donation to rebuild the charred ruins. +50g into the Guild's coffers at the start of each session.", cost:'50g', by:'a paladin or cleric' },
+          { id:'ornate-collection-bowl', name:'Ornate Collection Bowl', desc:"Visiting the Phoenix Guild has become somewhat of a local attraction. +200g into the Guild's coffers at the start of each session.", cost:'500g', by:'a paladin or cleric', needs:['improvised-collection-bowl','lumber-mill'], replaces:'improvised-collection-bowl' },
+          { id:'resplendent-collection-bowl', name:'Resplendent Collection Bowl', desc:"Visiting the Phoenix Guild has become a pilgrimage among the local nobility. +500g into the Guild's coffers at the start of each session.", cost:'1500g', by:'a paladin or cleric', needs:['ornate-collection-bowl','blacksmith'], replaces:'ornate-collection-bowl' }
+        ]},
+        { label:'Blessings', items:[
+          { id:'idol-of-inspiration', name:'Idol of Inspiration', desc:'Inspiration can now stack up to three.', cost:'100g', by:'a paladin or cleric' },
+          { id:'font-of-inspiration', name:'Font of Inspiration', desc:'As a wakeup action, players may pay 50g to gain Inspiration, if they do not yet have any Inspiration.', cost:'300g', by:'a paladin or cleric', needs:['idol-of-inspiration','stack-of-hay','lumber-mill'] },
+          { id:'ironbark-totem', name:'Ironbark Totem', desc:'As a wakeup action, players can touch this totem to gain resistance to slashing, piercing, or bludgeoning damage for the next combat encounter.', cost:'100g', by:'a druid or barbarian', needs:['stack-of-hay'] }
+        ]}
+      ]
+    },
+
+    { id:'botanist', title:'The Botanist', intro:null,
+      groups:[
+        { label:'The garden', items:[
+          { id:'botanical-garden', name:'Botanical Garden', desc:'As a wakeup action, heroes can visit the garden to pluck healing herbs and grind them into a Healing Poultice which heals 2d4 + 2 HP. Poultices spoil at the end of the day.', cost:'50g', by:'a druid, or a hero who has failed a death saving throw', needs:['stack-of-hay'] },
+          { id:'wildgrowth-glade', name:'Wildgrowth Glade', desc:'Healing Poultices made by herbs from the Botanical Garden now heal 4d4 + 4 HP.', cost:'300g', by:'a druid', needs:['botanical-garden','lumber-mill'] },
+          { id:'arcane-hydroponics-greenhouse', name:'Arcane Hydroponics Greenhouse', desc:'Healing Poultices made by herbs from the Botanical Garden now heal 8d4 + 4 HP.', cost:'3000g', by:'a druid and an artificer', needs:['wildgrowth-glade','blacksmith'], replaces:'wildgrowth-glade' }
+        ]},
+        { label:'Alternate harvests', items:[
+          { id:'free-roaming-ranch', name:'Free-Roaming Ranch', desc:'The Botanical Garden now alternatively provides herbs which are ground into a Poultice of Animal Friendship.', cost:'30g', by:'a hero who has befriended an animal', needs:['botanical-garden'] },
+          { id:'toxic-thornbush', name:'Toxic Thornbush', desc:'The Botanical Garden now alternatively provides herbs which are ground into a Poultice of Poison.', cost:'50g', by:'a hero who has applied Poison damage to a creature', needs:['botanical-garden'] },
+          { id:'lith-o-bloom', name:'Lith-o-bloom', desc:'The Botanical Garden now alternatively provides herbs which are ground into a Poultice of Hill Giant Strength.', cost:'500g', by:'a dwarf', needs:['botanical-garden','lumber-mill'] }
+        ]},
+        { label:'Apothecary', items:[
+          { id:'mixalot-cauldron', name:'Mixalot Cauldron', desc:'As a single wakeup action, heroes may create two poultices with different effects and combine them into a single poultice.', cost:'5000g', by:'a druid or sorcerer', needs:['botanical-garden','blacksmith'], needsAny:['free-roaming-ranch','toxic-thornbush','lith-o-bloom'] }
+        ]}
+      ]
+    }
+  ];
+
+  /* ---------- index ---------- */
+  const ITEM = {};
+  const REPLACED_BY = {};
+  const ALL_IDS = [];
+  DATA.forEach(b => b.groups.forEach(g => g.items.forEach(it => {
+    it._building = b.id;
+    ITEM[it.id] = it;
+    ALL_IDS.push(it.id);
+    if(it.replaces){ (REPLACED_BY[it.replaces] = REPLACED_BY[it.replaces] || []).push(it.id); }
+  })));
+
+  const nameOf = id => (ITEM[id] ? ITEM[id].name : id);
+
+  const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg>';
+  const CHEV_SVG = '<svg class="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6,9 12,15 18,9"/></svg>';
+
+  let state = {};
+  const openState = {};
+  DATA.forEach(b => { openState[b.id] = true; });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ---------- rules ---------- */
+  const isBuilt = id => !!state[id];
+  function needsMet(it){
+    const all = (it.needs || []).every(isBuilt);
+    const any = !it.needsAny || !it.needsAny.length || it.needsAny.some(isBuilt);
+    return all && any;
+  }
+  function supersededBy(it){
+    if(it.global) return null;
+    const winners = (REPLACED_BY[it.id] || []).filter(isBuilt);
+    return winners.length ? winners[winners.length - 1] : null;
+  }
+
+  /* ---------- render ---------- */
+  function renderChips(it){
+    let out = '';
+    if(it.by) out += '<span class="chip by">Built by ' + escapeHtml(it.by) + '</span>';
+    if(it.note) out += '<span class="chip note">' + escapeHtml(it.note) + '</span>';
+    (it.needs || []).forEach(n => {
+      const isUpgrade = n === it.replaces;
+      out += '<span class="chip need' + (isUpgrade ? ' upgrade' : '') + '" data-need="' + escapeHtml(n) + '">'
+        + (isUpgrade ? 'Upgrades ' : 'Needs ') + escapeHtml(nameOf(n)) + '</span>';
+    });
+    if(it.needsAny && it.needsAny.length){
+      out += '<span class="chip need" data-need-any="' + escapeHtml(it.needsAny.join(',')) + '">Needs '
+        + it.needsAny.map(id => escapeHtml(nameOf(id))).join(' or ') + '</span>';
+    }
+    out += '<span class="chip superseded" hidden></span>';
+    return '<span class="chips">' + out + '</span>';
+  }
+
+  function renderRow(it){
+    return '<label class="row" data-id="' + it.id + '">'
+      + '<input class="cb" type="checkbox" data-id="' + it.id + '" />'
+      + '<span class="stamp">' + CHECK_SVG + '</span>'
+      + '<span class="row-text">'
+        + '<span class="row-top">'
+          + '<span class="row-name">' + escapeHtml(it.name) + '</span>'
+          + (it.cost ? '<span class="row-cost">' + escapeHtml(it.cost) + '</span>' : '')
+        + '</span>'
+        + (it.desc ? '<span class="row-desc">' + escapeHtml(it.desc) + '</span>' : '')
+        + renderChips(it)
+      + '</span>'
+      + '</label>';
+  }
+
+  function renderGroup(g){
+    return '<div class="group' + (g.guildhall ? ' guildhall' : '') + '">'
+      + (g.label ? '<div class="group-label">' + escapeHtml(g.label) + '</div>' : '')
+      + g.items.map(renderRow).join('')
+      + '</div>';
+  }
+
+  function renderBuilding(b){
+    return '<section class="building" id="b-' + b.id + '">'
+      + '<button class="building-head" type="button" aria-expanded="true" aria-controls="body-' + b.id + '" data-building="' + b.id + '">'
+        + CHEV_SVG
+        + '<h2>' + escapeHtml(b.title) + '</h2>'
+        + '<span class="count" data-count="' + b.id + '"></span>'
+      + '</button>'
+      + '<div class="building-body" id="body-' + b.id + '"><div class="building-inner"><div class="pad">'
+        + (b.intro ? '<p class="intro">' + escapeHtml(b.intro) + '</p>' : '')
+        + '<p class="empty-note">Nothing here is available yet &mdash; build its prerequisites first.</p>'
+        + b.groups.map(renderGroup).join('')
+      + '</div></div></div>'
+      + '</section>';
+  }
+
+  function renderNav(){
+    return DATA.map(b => '<button class="nav-item" type="button" data-target="' + b.id + '">'
+      + '<span>' + escapeHtml(b.title) + '</span>'
+      + '<span class="nav-count" data-navcount="' + b.id + '"></span>'
+      + '</button>').join('');
+  }
+
+  function buildStaticDOM(){
+    document.getElementById('ledger').innerHTML = DATA.map(renderBuilding).join('');
+    document.getElementById('nav').innerHTML = renderNav();
+  }
+
+  /* ---------- state -> UI ---------- */
+  function applyState(){
+    const counts = {};
+    DATA.forEach(b => { counts[b.id] = { built:0, total:0 }; });
+
+    document.querySelectorAll('.row').forEach(row => {
+      const it = ITEM[row.dataset.id];
+      if(!it) return;
+      const built = isBuilt(it.id);
+      const met = needsMet(it);
+      const sup = supersededBy(it);
+      const locked = !built && !met;
+
+      row.classList.toggle('locked', locked);
+      row.classList.toggle('superseded', !!sup);
+      row.classList.toggle('hidden', !!sup || locked);
+
+      const cb = row.querySelector('.cb');
+      cb.checked = built;
+      cb.disabled = locked;
+
+      const supChip = row.querySelector('.chip.superseded');
+      if(sup){ supChip.textContent = 'Replaced by ' + nameOf(sup); supChip.hidden = false; }
+      else { supChip.textContent = ''; supChip.hidden = true; }
+
+      row.querySelectorAll('.chip.need').forEach(chip => {
+        let ok;
+        if(chip.dataset.need) ok = isBuilt(chip.dataset.need);
+        else ok = chip.dataset.needAny.split(',').some(isBuilt);
+        chip.classList.toggle('unmet', !ok);
+      });
+
+      const c = counts[it._building];
+      c.total++;
+      if(built) c.built++;
+    });
+
+    document.querySelectorAll('.group').forEach(g => {
+      g.classList.toggle('all-hidden', !g.querySelector('.row:not(.hidden)'));
+    });
+
+    DATA.forEach(b => {
+      const sec = document.getElementById('b-' + b.id);
+      sec.classList.toggle('all-hidden', !sec.querySelector('.row:not(.hidden)'));
+      const c = counts[b.id];
+      const label = c.built + '/' + c.total;
+      sec.querySelector('[data-count="' + b.id + '"]').textContent = label;
+      const nav = document.querySelector('[data-navcount="' + b.id + '"]');
+      if(nav) nav.textContent = label;
+    });
+
+    const done = ALL_IDS.filter(isBuilt).length;
+    document.getElementById('progress-stat').textContent = done + ' of ' + ALL_IDS.length + ' upgrades built';
+  }
+
+  /* ---------- sync plumbing ---------- */
+  function setSync(mode){
+    const el = document.getElementById('sync-status');
+    const text = el.querySelector('.sync-text');
+    el.classList.toggle('error', mode === 'offline' || mode === 'error');
+    if(mode === 'live') text.textContent = 'Live — synced with the party';
+    else if(mode === 'offline') text.textContent = 'Reconnecting…';
+    else if(mode === 'error') text.textContent = "Couldn't save — check the security rules";
+    else if(mode === 'setup') text.textContent = 'Needs setup — see the note below';
+    else text.textContent = 'Connecting…';
+  }
+
+  function showSetupBanner(){
+    const banner = document.createElement('div');
+    banner.className = 'setup-banner';
+    banner.innerHTML = "This ledger needs a Firebase config before it can sync. Open the file, find <code>firebaseConfig</code> near the top of the script, and paste in your project's values.";
+    document.querySelector('main').insertBefore(banner, document.getElementById('ledger'));
+  }
+
+  let db = null, checksRef = null;
+
+  function initFirebase(){
+    const app = initializeApp(firebaseConfig);
+    db = getDatabase(app);
+    checksRef = ref(db, 'guildhallLedger/checks');
+
+    onValue(ref(db, '.info/connected'), snap => setSync(snap.val() === true ? 'live' : 'offline'));
+    onValue(checksRef, snapshot => {
+      state = snapshot.val() || {};
+      applyState();
+    }, () => setSync('error'));
+  }
+
+  function writeItem(id, checked){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/checks/' + id), checked).catch(() => setSync('error'));
+  }
+
+  function resetAll(){
+    if(!db) return;
+    set(checksRef, {}).catch(() => setSync('error'));
+  }
+
+  /* ---------- interactions ---------- */
+  function setOpen(id, open){
+    openState[id] = open;
+    const sec = document.getElementById('b-' + id);
+    sec.classList.toggle('collapsed', !open);
+    sec.querySelector('.building-head').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function setupInteractions(){
+    document.getElementById('ledger').addEventListener('click', e => {
+      const head = e.target.closest('.building-head');
+      if(!head) return;
+      setOpen(head.dataset.building, !openState[head.dataset.building]);
+      syncCollapseBtn();
+    });
+
+    document.getElementById('ledger').addEventListener('change', e => {
+      const cb = e.target;
+      if(!cb.classList || !cb.classList.contains('cb')) return;
+      // Write to Firebase and let the listener push the new state back to everyone, us included.
+      writeItem(cb.dataset.id, cb.checked);
+    });
+
+    document.getElementById('nav').addEventListener('click', e => {
+      const btn = e.target.closest('.nav-item');
+      if(!btn) return;
+      const id = btn.dataset.target;
+      setOpen(id, true);
+      syncCollapseBtn();
+      document.getElementById('b-' + id).scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+
+    document.getElementById('reveal-toggle').addEventListener('change', e => {
+      document.body.classList.toggle('reveal', e.target.checked);
+    });
+
+    document.getElementById('collapse-btn').addEventListener('click', () => {
+      const anyOpen = DATA.some(b => openState[b.id]);
+      DATA.forEach(b => setOpen(b.id, !anyOpen));
+      syncCollapseBtn();
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if(confirm('This clears every checkmark on the ledger for the whole party. Are you sure?')){
+        resetAll();
+      }
+    });
+  }
+
+  function syncCollapseBtn(){
+    const anyOpen = DATA.some(b => openState[b.id]);
+    document.getElementById('collapse-btn').textContent = anyOpen ? 'Collapse all' : 'Expand all';
+  }
+
+  function setupNavHighlight(){
+    const buttons = Array.from(document.querySelectorAll('.nav-item'));
+    const sections = DATA.map(b => document.getElementById('b-' + b.id)).filter(Boolean);
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          const id = entry.target.id.replace('b-', '');
+          buttons.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+        }
+      });
+    }, { rootMargin:'-15% 0px -70% 0px' });
+    sections.forEach(s => io.observe(s));
+  }
+
+  function init(){
+    buildStaticDOM();
+    setupInteractions();
+    setupNavHighlight();
+    syncCollapseBtn();
+    applyState();
+
+    if(NEEDS_SETUP){
+      setSync('setup');
+      showSetupBanner();
+      return;
+    }
+    initFirebase();
+  }
+
+  init();
+
+  // exposed so the gating rules can be checked without a database
+  window.__ledger = { DATA, ITEM, get state(){ return state; }, set state(v){ state = v; applyState(); }, needsMet, supersededBy };
+</script>
+</body>
+</html>
