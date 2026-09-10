@@ -722,18 +722,6 @@
       scrollbar-width:none;
     }
     .side-scroll::-webkit-scrollbar{ display:none; }
-    /* room at the end of the rail so the last wing can be scrolled out
-       from under the floating button */
-    .side-scroll{ padding-right:112px; }
-    /* The corner the button sits in, masked so wing names do not run under
-       it. It belongs to the rail rather than the button: a negative z-index
-       child of the button would paint over the button's own background and
-       take its label with it. */
-    .side-scroll::after{
-      content:''; position:fixed; top:0; right:0; width:132px; height:40px;
-      background:linear-gradient(to right, rgba(34,26,16,0), var(--ink) 30px);
-      pointer-events:none;
-    }
     nav.side{ flex-direction:row; gap:2px; }
     .nav-item{
       width:auto; flex:0 0 auto; gap:6px; font-size:0.82rem; padding:6px 9px;
@@ -752,17 +740,22 @@
     }
     .ledger{ padding:2px 14px 8px; }
 
-    /* Collapse all lifts out of the footer and rides along the top corner,
-       where it is reachable from anywhere in a long ledger. */
+    /* Collapse all lifts out of the footer and floats in the bottom corner,
+       reachable from anywhere in a long ledger and well clear of the nav
+       rail along the top. */
     #collapse-btn{
-      position:fixed; top:4px; right:10px; z-index:30;
+      position:fixed; bottom:14px; right:12px; z-index:30;
       text-decoration:none; font-size:0.84rem; font-weight:600; line-height:1;
-      padding:0 14px; min-height:32px; border-radius:999px;
+      padding:0 16px; min-height:38px; border-radius:999px;
       background:var(--parchment); color:var(--ink);
       border:1px solid var(--brass-deep);
-      box-shadow:0 2px 10px rgba(0,0,0,0.55);
+      box-shadow:0 3px 14px rgba(0,0,0,0.6);
     }
     #collapse-btn:hover{ background:var(--brass); color:#2a1f0c; }
+    /* the last rows of the ledger have to clear it when scrolled to the end */
+    .app{ padding-bottom:78px; }
+    /* and a message rises above it rather than sharing the corner */
+    .toast{ bottom:64px; }
   }
 
   @media (max-width:640px){
