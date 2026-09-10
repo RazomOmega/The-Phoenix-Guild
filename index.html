@@ -74,6 +74,26 @@
   .nav-item.active{ color:var(--brass); border-left-color:var(--brass); background:rgba(176,129,46,0.12); }
   .nav-count{ font-size:0.75rem; font-variant-numeric:tabular-nums; opacity:0.75; flex-shrink:0; }
 
+  /* the guild's three stats, always in the corner of the eye */
+  .side-stats{
+    display:flex; gap:6px; margin-top:16px; padding-top:14px;
+    border-top:1px solid rgba(233,223,196,0.15);
+  }
+  .side-stats[hidden]{ display:none; }
+  .side-stat{
+    flex:1; text-align:center; padding:6px 2px 5px;
+    border:1px solid rgba(233,223,196,0.16); border-radius:5px;
+  }
+  .side-stat b{
+    display:block; font-family:'IM Fell English', Georgia, serif; font-weight:400;
+    font-size:1.25rem; line-height:1.1; color:var(--brass);
+    font-variant-numeric:tabular-nums;
+  }
+  .side-stat span{
+    display:block; font-size:0.66rem; letter-spacing:0.09em;
+    text-transform:uppercase; color:var(--text-on-ink-muted);
+  }
+
   .side-foot{ margin-top:16px; padding-top:14px; border-top:1px solid rgba(233,223,196,0.15); display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
   .stat{ font-size:0.8rem; color:var(--text-on-ink-muted); }
 
@@ -131,6 +151,10 @@
   .link-btn:hover{ color:var(--brass); }
   .link-btn.danger{ color:#a15c3f; }
   .link-btn.danger:hover{ color:#c2704b; }
+  /* the same link, but standing on parchment instead of ink */
+  .link-btn.sheet-danger{ color:var(--rust); }
+  .link-btn.sheet-danger:hover{ color:#6f3b28; }
+  .link-btn[hidden]{ display:none; }
   .link-btn[hidden]{ display:none; }
   button:focus-visible, .nav-item:focus-visible, label:focus-within .stamp{
     outline:2px solid var(--verdigris); outline-offset:2px;
@@ -146,11 +170,16 @@
     padding:2px 30px 10px;
   }
 
-  section.building + section.building{ border-top:1px solid var(--parchment-edge); }
+  /* Every wing carries its own rule, so the seam between two of them stays
+     visible even with both expanded to their full height. The topmost one
+     on screen drops it - JS marks that one, since which wing comes first
+     changes as the guild is built. */
+  section.building{ border-top:1px solid rgba(58,46,28,0.26); }
+  section.building.first-visible{ border-top:none; }
 
   .building-head{
     display:flex; align-items:center; gap:12px; width:100%;
-    background:none; border:none; padding:20px 0 12px;
+    background:none; border:none; padding:22px 0 12px;
     font:inherit; color:inherit; text-align:left; cursor:pointer;
   }
   .building-head h2{ font-size:1.5rem; flex:1; }
@@ -181,6 +210,14 @@
   .group.all-hidden{ display:none; }
   body.reveal .group.all-hidden{ display:block; }
 
+  /* A "floats" group puts what the guild has not bought yet at the top,
+     so the next thing to build is always the first thing you read. Rows are
+     reordered visually, so each carries its own rule rather than leaning on
+     a + selector that still follows document order. */
+  .group.floats{ display:flex; flex-direction:column; }
+  .group.floats > .group-label{ order:-1; }
+  .group.floats .row{ border-top:1px solid rgba(58,46,28,0.12); }
+
   /* a wing with nothing available is gone from the page and from the nav */
   .building.all-hidden{ display:none; }
   body.reveal .building.all-hidden{ display:block; }
@@ -197,11 +234,24 @@
   .row + .row{ border-top:1px solid rgba(58,46,28,0.12); }
   .row.hidden{ display:none; }
   body.reveal .row.hidden{ display:block; }
+  /* "Hide purchased upgrades" is its own filter: unlike a locked or replaced
+     row, one struck out this way stays gone even in reveal mode, because
+     reveal is there to show what is missing, not what is done. */
+  .row.lean-hidden{ display:none; }
   .row.locked .row-main{ cursor:not-allowed; }
   body.reveal .row.locked{ opacity:0.5; cursor:not-allowed; }
   .row.locked.always{ opacity:0.5; cursor:not-allowed; }
   body.reveal .row.superseded{ opacity:0.55; }
   body.reveal .row.superseded .row-name{ text-decoration:line-through; text-decoration-color:rgba(58,46,28,0.4); }
+
+  /* An attribute requirement is a requirement to BUILD, never to see:
+     the row stays on the page in full, but the stamp will not take a mark
+     until the House of Stewardship holds enough of the stat. */
+  .row.attr-locked .row-main{ cursor:not-allowed; }
+  .row.attr-locked .row-name, .row.attr-locked .row-cost{ color:var(--text-muted); }
+  .row.attr-locked .stamp{ border-color:rgba(138,75,52,0.45); border-style:dashed; }
+  body.dm .row.attr-locked .row-main{ cursor:pointer; }
+  body.dm .row.attr-locked .stamp{ border-color:var(--brass-deep); border-style:solid; }
 
   input.cb{ position:absolute; opacity:0; width:26px; height:26px; margin:0; cursor:pointer; }
   .stamp{
@@ -244,6 +294,14 @@
   .chip.superseded{ border-color:rgba(58,46,28,0.22); font-style:italic; }
   .row:not(.superseded) .chip.superseded{ display:none; }
 
+  /* an attribute chip only speaks up while the stat is short */
+  .chip.attr{ display:none; }
+  .chip.attr.unmet{
+    display:inline-flex; border-color:rgba(138,75,52,0.45);
+    color:var(--rust); background:rgba(138,75,52,0.07);
+  }
+  body.reveal .chip.attr{ display:inline-flex; }
+
   /* ---------- shared racks and the coin chest ---------- */
   .panel{ margin:10px 0 2px 38px; }
   .panel[hidden]{ display:none; }
@@ -268,7 +326,254 @@
   }
   .coin-label{ font-size:0.88rem; color:var(--text-muted); }
   .coin-actions{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .bound-head{
+    font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--text-muted); margin:14px 0 6px;
+  }
+  .bound-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:9px 0; border-top:1px solid rgba(58,46,28,0.12);
+  }
+  .bound-amt{
+    font-weight:600; font-variant-numeric:tabular-nums; color:var(--brass-deep);
+    white-space:nowrap;
+  }
+  .bound-words{ flex:1; min-width:140px; font-size:0.88rem; font-style:italic; color:var(--text-muted); }
+  .bound-empty{ font-size:0.86rem; font-style:italic; color:var(--text-muted); padding:4px 0; }
+
+  .seg{ display:flex; gap:7px; margin:14px 0 4px; }
+  .seg button{
+    flex:1; font:inherit; font-size:0.85rem; padding:9px 10px; min-height:42px;
+    border:1px solid rgba(58,46,28,0.3); background:rgba(255,255,255,0.35);
+    border-radius:5px; color:var(--text-muted); cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{
+    border-color:var(--brass-deep); background:rgba(176,129,46,0.2);
+    color:var(--text); font-weight:600;
+  }
+  .seg[hidden], .words-wrap[hidden]{ display:none; }
+  .words-wrap{ margin-top:12px; }
+  .sheet input.words{
+    width:100%; font-family:inherit; font-size:16px; color:var(--text);
+    background:rgba(255,255,255,0.5); border:1px solid rgba(58,46,28,0.35);
+    border-radius:5px; padding:11px 12px; margin-top:6px;
+  }
+  .sheet input.words::placeholder{ color:var(--text-muted); opacity:0.65; font-style:italic; }
+  .sheet input.words:focus{ outline:2px solid var(--brass); outline-offset:1px; border-color:var(--brass); }
+
+  @media (max-width:520px){
+    .bound-row .btn{ width:100%; }
+  }
   .btn.small{ font-size:0.84rem; padding:8px 14px; min-height:38px; }
+
+  /* ---------- the House of Stewardship ---------- */
+  .building.all-hidden .steward-body{ display:none; }
+  .steward-body{ margin-top:12px; }
+
+  .stats{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-top:16px;
+  }
+  .stat-card{
+    border:1px solid rgba(58,46,28,0.18); border-radius:6px;
+    background:rgba(255,255,255,0.3); padding:12px 14px 13px;
+  }
+  .stat-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+  .stat-key{
+    font-size:0.72rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-muted);
+  }
+  .stat-num{
+    font-family:'IM Fell English', Georgia, serif; font-size:2rem; line-height:1;
+    color:var(--brass-deep); font-variant-numeric:tabular-nums;
+  }
+  .stat-desc{ margin:6px 0 0; font-size:0.85rem; color:var(--text-muted); }
+
+  /* the collapsible sub-lists: the guildsfolk roster, and the tome's spells */
+  .folk{ margin-top:20px; border-top:1px solid rgba(58,46,28,0.12); }
+  .panel .folk{ margin-top:0; border-top:none; }
+  .panel .folk-head{ padding-top:0; }
+  .folk-pad #write-spell{ margin-bottom:4px; }
+  .folk-head{
+    display:flex; align-items:center; gap:10px; width:100%;
+    background:none; border:none; padding:12px 0 10px;
+    font:inherit; color:inherit; text-align:left; cursor:pointer;
+  }
+  .folk-head .folk-title{
+    flex:1; font-size:0.72rem; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--text-muted);
+  }
+  .folk-head .folk-count{ font-size:0.78rem; color:var(--text-muted); font-variant-numeric:tabular-nums; }
+  .folk-head .chev{ transform:rotate(-90deg); }
+  .folk.open .folk-head .chev{ transform:rotate(0deg); }
+  .folk-body{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
+  .folk.open .folk-body{ grid-template-rows:1fr; }
+  .folk-inner{ overflow:hidden; }
+  .folk-pad{ padding-bottom:10px; }
+
+  .folk-row{
+    display:flex; align-items:center; gap:12px;
+    padding:9px 0; border-top:1px solid rgba(58,46,28,0.12);
+  }
+  .folk-row:first-child{ border-top:none; }
+  .folk-name{ flex:1; min-width:0; font-weight:600; font-size:0.95rem; }
+  .folk-gave{
+    font-size:0.8rem; letter-spacing:0.04em; color:var(--brass-deep);
+    border:1px solid rgba(176,129,46,0.5); border-radius:999px; padding:2px 10px;
+    white-space:nowrap; font-variant-numeric:tabular-nums;
+  }
+  .folk-empty{ font-size:0.88rem; font-style:italic; color:var(--text-muted); padding:6px 0 2px; }
+  .folk-drop{
+    background:none; border:none; padding:2px 6px; cursor:pointer;
+    color:#a15c3f; font:inherit; font-size:1rem; line-height:1; border-radius:4px;
+  }
+  .folk-drop:hover{ background:rgba(161,92,63,0.12); }
+  .folk-drop[hidden]{ display:none; }
+
+  .statseg{ display:flex; gap:7px; margin:8px 0 4px; }
+  .statopt{ flex:1; position:relative; cursor:pointer; }
+  .statopt input{ position:absolute; opacity:0; width:0; height:0; }
+  .statopt span{
+    display:block; text-align:center; font-size:0.85rem; padding:9px 8px; min-height:42px;
+    border:1px solid rgba(58,46,28,0.3); background:rgba(255,255,255,0.35);
+    border-radius:5px; color:var(--text-muted);
+  }
+  .statopt small{ display:block; font-size:0.68rem; opacity:0.8; }
+  .statopt input:checked + span{
+    border-color:var(--brass-deep); background:rgba(176,129,46,0.2);
+    color:var(--text); font-weight:600;
+  }
+  .statopt input:focus-visible + span{ outline:2px solid var(--verdigris); outline-offset:2px; }
+
+  /* ---------- the shop shelves ---------- */
+  .good{
+    display:flex; align-items:flex-start; gap:14px;
+    padding:9px 0; border-top:1px solid rgba(58,46,28,0.12);
+  }
+  .good:first-child{ border-top:none; }
+  .good-text{ flex:1; min-width:0; }
+  .good-name{ font-weight:600; font-size:0.96rem; }
+  .good-desc{ display:block; margin-top:2px; font-size:0.87rem; font-style:italic; color:var(--text-muted); }
+  .good-cost{
+    font-size:0.88rem; color:var(--brass-deep); white-space:nowrap;
+    flex-shrink:0; font-variant-numeric:tabular-nums; font-weight:600;
+  }
+
+  /* ---------- the Barrelbot ---------- */
+  .building.all-hidden .bot-body{ display:none; }
+
+  .bot-name-row{
+    display:flex; align-items:baseline; flex-wrap:wrap; gap:12px;
+    margin-top:10px;
+  }
+  /* name and titles read as one line of prose, so no gap between them */
+  .bot-called{ flex:1; min-width:0; }
+  .bot-hint{ margin:8px 0 0; font-size:0.85rem; color:var(--text-muted); }
+  .bot-name{
+    font-family:'IM Fell English', Georgia, serif; font-size:1.6rem; line-height:1.15;
+    background:none; border:none; border-bottom:1px dashed rgba(58,46,28,0.35);
+    padding:0 2px 1px; color:var(--text); cursor:pointer;
+  }
+  .bot-name:hover{ color:var(--brass-deep); border-bottom-color:var(--brass-deep); }
+  .bot-titles{
+    font-family:'IM Fell English', Georgia, serif; font-style:italic;
+    font-size:1.15rem; color:var(--text-muted); flex:1; min-width:0;
+  }
+  .bot-title{
+    font:inherit; background:none; border:none; padding:0 1px;
+    color:var(--text-muted); cursor:pointer;
+    border-bottom:1px dashed transparent;
+  }
+  .bot-title:hover{ color:var(--brass-deep); border-bottom-color:var(--brass-deep); }
+  .bot-add{ flex-shrink:0; }
+
+  .bot-summary{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(148px, 1fr));
+    gap:9px; margin:16px 0 0;
+  }
+  .bot-stat{
+    border:1px solid rgba(58,46,28,0.18); border-radius:6px;
+    background:rgba(255,255,255,0.3); padding:9px 12px 10px;
+  }
+  .bot-key{ font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted); }
+  .bot-val{ font-weight:600; font-size:1.02rem; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .bot-val.none{ font-weight:400; font-style:italic; color:var(--text-muted); }
+
+  .bot-abilities{ margin-top:14px; }
+  .bot-ability{
+    display:flex; gap:11px; padding:9px 0;
+    border-top:1px solid rgba(58,46,28,0.12); font-size:0.9rem;
+  }
+  .bot-ability-src{ font-weight:600; flex:0 0 128px; }
+  .bot-ability-text{ flex:1; min-width:0; color:var(--text-muted); }
+  .bot-none{ font-size:0.88rem; font-style:italic; color:var(--text-muted); margin:10px 0 0; }
+
+  /* The frame: three columns, with the corner cells left empty on purpose.
+     minmax(0,...) rather than 1fr, so a long module name wraps inside its
+     card instead of forcing the whole grid wider than the page. */
+  .bot-grid{
+    display:grid; grid-template-columns:repeat(3, minmax(0, 1fr));
+    gap:9px; margin-top:18px; max-width:540px;
+  }
+  .bot-slot{
+    width:100%; min-height:80px; display:flex; flex-direction:column;
+    justify-content:center; gap:3px; padding:10px 12px;
+    border:1px solid rgba(58,46,28,0.28); border-radius:7px;
+    background:rgba(255,255,255,0.35);
+    font:inherit; color:inherit; text-align:left; cursor:pointer;
+  }
+  .bot-slot:hover{ border-color:var(--brass-deep); background:rgba(176,129,46,0.12); }
+  .bot-slot-key{ font-size:0.67rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted); }
+  .bot-slot-mod{ font-weight:600; font-size:0.92rem; line-height:1.25; overflow-wrap:anywhere; }
+  .bot-slot.empty .bot-slot-mod{ font-weight:400; font-style:italic; color:var(--text-muted); }
+  .bot-slot.more{ border-style:dashed; }
+
+  .mod-list{ display:flex; flex-direction:column; gap:7px; margin-top:12px; }
+  .mod{
+    width:100%; font:inherit; color:inherit; text-align:left; cursor:pointer;
+    border:1px solid rgba(58,46,28,0.28); border-radius:6px;
+    background:rgba(255,255,255,0.4); padding:10px 12px;
+  }
+  .mod:hover{ border-color:var(--brass-deep); background:rgba(176,129,46,0.1); }
+  .mod[aria-pressed="true"]{ border-color:var(--brass-deep); background:rgba(176,129,46,0.22); }
+  .mod-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .mod-name{ font-weight:600; font-size:0.94rem; }
+  .mod-cost{ font-size:0.82rem; color:var(--text-muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .mod-desc{ font-size:0.85rem; color:var(--text-muted); margin-top:3px; }
+  .mod-hint{ margin:14px 0 0; font-size:0.85rem; font-style:italic; color:var(--text-muted); }
+  .mod-empty{ margin:12px 0 0; font-size:0.88rem; font-style:italic; color:var(--text-muted); }
+
+  /* ---------- the bill, ticked off before anything is built ---------- */
+  .task{
+    display:flex; align-items:flex-start; gap:11px;
+    padding:11px 13px; border-radius:6px; cursor:pointer;
+    border:1px solid rgba(58,46,28,0.25); background:rgba(255,255,255,0.35);
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .task + .task{ margin-top:7px; }
+  .task:hover{ border-color:rgba(58,46,28,0.5); }
+  .sheet .task input{
+    position:absolute; opacity:0; width:0; height:0;
+    margin:0; padding:0; border:none;
+  }
+  .task .box{
+    position:relative; flex-shrink:0; margin-top:1px;
+    width:22px; height:22px; border-radius:5px;
+    border:2px solid var(--brass-deep); background:transparent;
+    transition:background .15s ease;
+  }
+  .task .box svg{
+    position:absolute; inset:0; margin:auto; width:13px; height:13px;
+    opacity:0; transition:opacity .12s ease;
+  }
+  .task input:checked + .box{ background:var(--brass); }
+  .task input:checked + .box svg{ opacity:1; }
+  .task input:focus-visible + .box{ outline:2px solid var(--verdigris); outline-offset:2px; }
+  .task.done{ border-color:var(--brass-deep); background:rgba(176,129,46,0.15); }
+  .task-text{ flex:1; min-width:0; font-size:0.94rem; line-height:1.4; }
+  .met-note{
+    margin:13px 0 0; font-size:0.82rem; color:var(--text-muted); line-height:1.45;
+  }
+  .met-note[hidden]{ display:none; }
+  .met-note b{ font-weight:600; }
 
   /* ---------- the derived readouts ---------- */
   .sline{ display:flex; align-items:flex-start; gap:14px; padding:10px 0; }
@@ -324,12 +629,14 @@
     background:var(--parchment); color:var(--text);
     border-radius:8px; padding:20px 20px 16px;
     box-shadow:0 18px 50px rgba(0,0,0,0.5);
+    max-height:calc(100dvh - 40px); overflow-y:auto;
   }
   .sheet h3{
     font-family:'IM Fell English', Georgia, serif; font-weight:400;
     font-size:1.3rem; margin:0;
   }
   .sheet .prompt{ margin:10px 0 10px; font-size:0.92rem; color:var(--text-muted); }
+  .sheet .prompt.tight{ margin-bottom:2px; }
   .sheet input{
     width:100%; font-family:inherit; font-size:16px; /* 16px keeps iOS from zooming */
     color:var(--text); background:rgba(255,255,255,0.5);
@@ -349,6 +656,8 @@
   .btn.ghost:hover{ color:var(--text); border-color:rgba(58,46,28,0.55); }
   .btn.primary{ background:var(--brass); border-color:var(--brass-deep); color:#2a1f0c; font-weight:600; }
   .btn.primary:hover{ background:var(--brass-deep); color:var(--parchment); }
+  .btn.danger{ background:#8a4b34; border-color:#6f3b28; color:#f4e9d2; font-weight:600; }
+  .btn.danger:hover{ background:#6f3b28; }
 
   @media (max-width:420px){
     .namer-actions{ width:100%; }
@@ -413,6 +722,9 @@
       scrollbar-width:none;
     }
     .side-scroll::-webkit-scrollbar{ display:none; }
+    /* room at the end of the rail so the last wing can be scrolled out
+       from under the floating button */
+    .side-scroll{ padding-right:104px; }
     nav.side{ flex-direction:row; gap:2px; }
     .nav-item{
       width:auto; flex:0 0 auto; gap:6px; font-size:0.82rem; padding:6px 9px;
@@ -424,11 +736,31 @@
     /* jumping to a section must clear the rail */
     section.building{ scroll-margin-top:46px; }
     main{ order:4; padding-top:14px; }
+    .side-stats{ order:5; margin-top:20px; }
     .side-foot{
-      order:5; flex-direction:row; align-items:center; flex-wrap:wrap; gap:16px;
+      order:6; flex-direction:row; align-items:center; flex-wrap:wrap; gap:16px;
       margin-top:20px; padding-top:14px;
     }
     .ledger{ padding:2px 14px 8px; }
+
+    /* Collapse all lifts out of the footer and rides along the top corner,
+       where it is reachable from anywhere in a long ledger. */
+    #collapse-btn{
+      position:fixed; top:4px; right:10px; z-index:30;
+      text-decoration:none; font-size:0.76rem; line-height:1;
+      padding:7px 13px; border-radius:999px;
+      background:var(--parchment); color:var(--ink);
+      border:1px solid var(--brass-deep);
+      box-shadow:0 2px 10px rgba(0,0,0,0.5);
+    }
+    #collapse-btn:hover{ background:var(--brass); color:#2a1f0c; }
+    /* the rail scrolls underneath, so the corner it sits in is masked out
+       and faded into the page rather than letting wing names peek past it */
+    #collapse-btn::before{
+      content:''; position:fixed; top:0; right:0; width:124px; height:36px;
+      background:linear-gradient(to right, rgba(34,26,16,0), var(--ink) 26px);
+      z-index:-1; pointer-events:none;
+    }
   }
 
   @media (max-width:640px){
@@ -438,6 +770,21 @@
     .slot{ font-size:16px; }   /* 16px keeps iOS from zooming on focus */
     .credit{ margin-left:34px; }
     .sline-top{ flex-wrap:wrap; }
+    .stats{ grid-template-columns:1fr; gap:8px; }
+    .stat-card{ padding:10px 12px 11px; }
+    .stat-top{ align-items:center; }
+    .stat-num{ font-size:1.6rem; }
+
+    /* the construct has to fit in three columns on a phone too, so the
+       cards give up padding and a little type size rather than the shape */
+    .bot-grid{ gap:6px; }
+    .bot-slot{ min-height:66px; padding:8px 9px; gap:2px; }
+    .bot-slot-key{ font-size:0.58rem; letter-spacing:0.05em; }
+    .bot-slot-mod{ font-size:0.82rem; line-height:1.2; }
+    .bot-ability{ flex-direction:column; gap:1px; }
+    .bot-ability-src{ flex:none; }
+    .bot-name{ font-size:1.4rem; }
+    .bot-titles{ font-size:1.05rem; }
   }
 
   @media (max-width:380px){
@@ -460,12 +807,23 @@
         <nav class="side" id="nav"></nav>
       </div>
 
+      <div class="side-stats" id="side-stats" hidden>
+        <div class="side-stat"><b data-side-stat="STR">0</b><span>Str</span></div>
+        <div class="side-stat"><b data-side-stat="INT">0</b><span>Int</span></div>
+        <div class="side-stat"><b data-side-stat="CHA">0</b><span>Cha</span></div>
+      </div>
+
       <div class="side-foot">
         <span class="stat" id="progress-stat">&nbsp;</span>
         <label class="toggle">
           <input type="checkbox" id="reveal-toggle" />
           <span class="track"><span class="knob"></span></span>
           <span>Show locked &amp; replaced</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="lean-toggle" />
+          <span class="track"><span class="knob"></span></span>
+          <span>Hide purchased upgrades</span>
         </label>
         <button class="link-btn" id="collapse-btn" type="button">Collapse all</button>
 
@@ -476,6 +834,7 @@
             <span>DM mode</span>
           </label>
           <span class="dm-badge" id="dm-badge" hidden>Building as &ldquo;A Higher Hand&rdquo;</span>
+          <button class="link-btn" id="buildall-btn" type="button" hidden>Build everything</button>
           <button class="link-btn danger" id="destroy-btn" type="button" hidden>Destroy the Guild</button>
         </div>
       </div>
@@ -491,17 +850,146 @@
     <span class="toast-track"><span class="toast-bar"></span></span>
   </div>
 
+  <dialog class="namer" id="bound-dlg" aria-labelledby="bound-title">
+    <form class="sheet" id="bound-form" method="dialog">
+      <h3 id="bound-title">Withdraw</h3>
+      <p class="prompt" id="bound-text"></p>
+      <div class="namer-foot">
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="bound-cancel">Cancel</button>
+          <button type="submit" class="btn primary">Withdraw</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
   <dialog class="namer" id="coin" aria-labelledby="coin-title">
     <form class="sheet" id="coin-form" method="dialog">
       <h3 id="coin-title">Deposit</h3>
+      <div class="seg" id="coin-seg" hidden>
+        <button type="button" data-kind="plain" aria-pressed="true">Add to chest</button>
+        <button type="button" data-kind="bind" aria-pressed="false">Enchant coins</button>
+      </div>
       <label class="prompt" for="coin-input">How much gold?</label>
       <input id="coin-input" class="code" type="text" inputmode="numeric" autocomplete="off"
              maxlength="9" pattern="[0-9]*" enterkeyhint="done" />
+      <div class="words-wrap" id="coin-words-wrap" hidden>
+        <label class="prompt" for="coin-words">The words laid on the coins</label>
+        <input id="coin-words" class="words" type="text" maxlength="120" autocomplete="off" />
+      </div>
       <div class="namer-foot">
         <span class="counter" id="coin-note"></span>
         <span class="namer-actions">
           <button type="button" class="btn ghost" id="coin-cancel">Cancel</button>
           <button type="submit" class="btn primary" id="coin-ok">Deposit</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="namer" id="retire" aria-labelledby="retire-title">
+    <form class="sheet" id="retire-form" method="dialog">
+      <h3 id="retire-title">Retire a hero</h3>
+      <label class="prompt" for="retire-name">Which hero hangs up their boots?</label>
+      <input id="retire-name" type="text" maxlength="60" autocomplete="off" enterkeyhint="next" />
+
+      <p class="prompt tight" id="retire-stat-label">What will your character add to the Guild?</p>
+      <div class="statseg" role="radiogroup" aria-labelledby="retire-stat-label">
+        <label class="statopt">
+          <input type="radio" name="retire-stat" value="STR" checked />
+          <span>STR<small>Strength</small></span>
+        </label>
+        <label class="statopt">
+          <input type="radio" name="retire-stat" value="INT" />
+          <span>INT<small>Intelligence</small></span>
+        </label>
+        <label class="statopt">
+          <input type="radio" name="retire-stat" value="CHA" />
+          <span>CHA<small>Charisma</small></span>
+        </label>
+      </div>
+
+      <label class="prompt" for="retire-amt">How much of it? (1&ndash;30)</label>
+      <input id="retire-amt" class="code" type="text" inputmode="numeric" autocomplete="off"
+             maxlength="2" pattern="[0-9]*" enterkeyhint="done" />
+
+      <div class="namer-foot">
+        <span class="counter" id="retire-note"></span>
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="retire-cancel">Cancel</button>
+          <button type="submit" class="btn primary">Retire</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="namer" id="ask" aria-labelledby="ask-title">
+    <form class="sheet" id="ask-form" method="dialog">
+      <h3 id="ask-title"></h3>
+      <label class="prompt" for="ask-input" id="ask-label"></label>
+      <input id="ask-input" type="text" maxlength="80" autocomplete="off" enterkeyhint="done" />
+      <div class="namer-foot">
+        <button type="button" class="link-btn sheet-danger" id="ask-remove" hidden>Remove</button>
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="ask-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="ask-ok">Save</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="namer" id="buildall" aria-labelledby="buildall-title">
+    <form class="sheet" id="buildall-form" method="dialog">
+      <h3 id="buildall-title">Build everything</h3>
+      <p class="prompt" id="buildall-text"></p>
+      <div class="namer-foot">
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="buildall-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="buildall-ok">Build everything</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="namer" id="buildcheck" aria-labelledby="buildcheck-title">
+    <form class="sheet" id="buildcheck-form" method="dialog">
+      <h3 id="buildcheck-title"></h3>
+      <p class="prompt">Tick off what this costs the guild before it goes in the ledger.</p>
+      <div id="buildcheck-list"></div>
+      <p class="met-note" id="buildcheck-met" hidden></p>
+      <div class="namer-foot">
+        <span class="counter" id="buildcheck-count"></span>
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="buildcheck-cancel">Cancel</button>
+          <button type="submit" class="btn primary" id="buildcheck-ok" disabled>Build it</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="namer" id="unretire" aria-labelledby="unretire-title">
+    <form class="sheet" id="unretire-form" method="dialog">
+      <h3 id="unretire-title">Are you sure?</h3>
+      <p class="prompt" id="unretire-text"></p>
+      <div class="namer-foot">
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="unretire-cancel">Keep them</button>
+          <button type="submit" class="btn danger">Remove</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="namer" id="modpick" aria-labelledby="modpick-title">
+    <form class="sheet" id="modpick-form" method="dialog">
+      <h3 id="modpick-title"></h3>
+      <p class="prompt" id="modpick-sub"></p>
+      <div class="mod-list" id="mod-list"></div>
+      <p class="mod-empty" id="mod-empty" hidden></p>
+      <p class="mod-hint" id="mod-hint" hidden></p>
+      <div class="namer-foot">
+        <span class="namer-actions">
+          <button type="button" class="btn ghost" id="modpick-close">Done</button>
         </span>
       </div>
     </form>
@@ -565,8 +1053,20 @@
        by        who has to build it -> chip: "Built by an artificer"
        note      any other constraint, free text -> its own chip
                  e.g. note:'Only during a full moon'
+       relic     paid for with a thing rather than gold. Becomes both the
+                 "Requires: X (obtainable by completing a certain quest)"
+                 chip and an "I have a X" line on the bill.
+
+     `cost`, `by`, `note` and `relic` are what the party has to hand over,
+     so each becomes a line on the checklist shown when a row is ticked.
+     `needs`, `needsAny` and `attr` are checked by the ledger itself, so
+     they are only listed there as already in place.
        needs     [ids] ALL must be checked before this appears
        needsAny  [ids] at least ONE must be checked
+       attr      { STR:15 } minimum retired stats held by the House of
+                 Stewardship. THIS IS A REQUIREMENT TO BUILD, NOT TO SEE:
+                 a row whose needs are met is always on the page, and an
+                 unmet attribute only stops the stamp from taking a mark.
        replaces  id of the upgrade this supersedes - once this is
                  built, that older row disappears from the ledger
        panel     'armory' or 'chest' - hangs the shared rack or the coin
@@ -588,24 +1088,26 @@
      is just another entry in needs.
      ============================================================== */
   const DATA = [
-    { id:'guild', title:'The Phoenix Guild', intro:'The wings of the guild themselves. A wing has to be raised before any of its upgrades appear.',
+    { id:'guild', title:'The Phoenix Guild', intro:'Raise the devastated wings of the Phoenix Guild from the ashes.',
       groups:[
-        { label:'The wings', guildhall:true, items:[
+        { label:'The wings', guildhall:true, float:true, items:[
           { id:'bld-inn', name:'Firebird Inn', desc:'Create a place where you can safely sleep.', cost:'10g' },
           { id:'bld-tavern', name:'Ashfall Tavern', desc:'Recruit newcomers to the Phoenix Guild.', cost:'10g' },
-          { id:'bld-warehouse', name:'Warehouse', desc:'Leave excess resources at the Guild for those who might need it most.', cost:'10g' },
-          { id:'bld-altar', name:'Altar', desc:'Clerics and Paladins may collect donations from visiting townsfolk and bless heroes before quests.', cost:'20g', needs:['stack-of-hay'] },
-          { id:'bld-botanist', name:'Botanist', desc:'Each day, heroes may collect poultices from the local garden to give them an edge in their shenanigans.', cost:'20g', needs:['stack-of-hay'] },
-          { id:'bld-workshop', name:'Workshop', desc:"Artificers can enhance the guild's capabilities with automata and enhanced weaponry.", cost:'50g' }
+          { id:'bld-warehouse', name:'Warehouse', desc:'Leave excess resources and weaponry at the Guild for the heroes who might need it most.', cost:'10g', needs:['bld-tavern','bld-inn'] },
+          { id:'bld-stewardship', name:'House of Stewardship', desc:'Retire heroes to work at maintaining the Phoenix Guild.', cost:'10g', needs:['bld-warehouse'] },
+          { id:'bld-merchant', name:"Merchant's Wing", desc:"A local shop with adventurer's supplies.", cost:'50g', needs:['bld-stewardship'] },
+          { id:'bld-altar', name:'Altar', desc:'Clerics and Paladins may collect donations from visiting townsfolk and bless heroes before quests.', cost:'20g', needs:['bld-stewardship'], attr:{ CHA:15 } },
+          { id:'bld-botanist', name:'Botanist', desc:'Each day, heroes may collect poultices from the local garden to give them an edge in their shenanigans.', cost:'20g', needs:['bld-stewardship'], attr:{ INT:15 } },
+          { id:'bld-workshop', name:'Workshop', desc:"Artificers can enhance the guild's capabilities with an automaton and magically enhanced weaponry.", cost:'50g', needs:['ruins-of-ales-past','bld-warehouse'] }
         ]},
-        { label:'Guild-wide works', guildhall:true, items:[
-          { id:'lumber-mill', name:'Lumber Mill', desc:'Unlock even more powerful upgrades among the Guild.', cost:'500g', needs:['bld-workshop'], global:true },
-          { id:'blacksmith', name:'Blacksmith', desc:'Unlock the most powerful upgrades among the Guild.', cost:'5000g', needs:['lumber-mill'], global:true }
+        { label:'Guild-wide works', guildhall:true, float:true, items:[
+          { id:'lumber-mill', name:'Lumber Mill', desc:'Unlock even more powerful upgrades among the Guild.', cost:'500g', needs:['bld-workshop'], attr:{ STR:20 }, global:true },
+          { id:'blacksmith', name:'Blacksmith', desc:'Unlock the most powerful upgrades among the Guild.', cost:'5000g', needs:['lumber-mill'], attr:{ STR:30, INT:30 }, global:true }
         ]}
       ]
     },
 
-    { id:'inn', title:'Firebird Inn', intro:null, gate:'bld-inn',
+    { id:'inn', title:'Firebird Inn', intro:'Warmth and safety are the foundation of heroic bravery.', gate:'bld-inn',
       groups:[
         { label:'Foundations', items:[
           { id:'stack-of-hay', name:'Stack of Hay', desc:'You can sleep safely, without the risk of a nightly ambush. Each player gets one wakeup action after taking a long rest here.', cost:'10g', needs:['bld-inn'] },
@@ -631,61 +1133,119 @@
       ]
     },
 
-    { id:'tavern', title:'Ashfall Tavern', intro:null, gate:'bld-tavern',
+    { id:'tavern', title:'Ashfall Tavern', intro:'New adventurers are always welcome. More experienced hands even more so.', gate:'bld-tavern',
       groups:[
-        { label:'Who you can recruit', items:[
-          { id:'ruins-of-ales-past', name:'Ruins of Ales Past', desc:'Can recruit Fighters, Rangers, and Rogues.', cost:'Free', needs:['bld-tavern'] },
-          { id:'holy-icon', name:'Holy Icon', desc:'Can recruit Clerics and Paladins.', cost:'', needs:['ruins-of-ales-past'] },
-          { id:'eldritch-idol', name:'Eldritch Idol', desc:'Can recruit Warlocks.', cost:'', needs:['ruins-of-ales-past'] },
-          { id:'totemic-lodestone', name:'Totemic Lodestone', desc:'Can recruit Druids and Barbarians.', cost:'', needs:['ruins-of-ales-past'] },
-          { id:'singing-bowl', name:'Singing Bowl', desc:'Can recruit Bards and Monks.', cost:'', needs:['ruins-of-ales-past'] },
-          { id:'arcane-orrery', name:'Arcane Orrery', desc:'Can recruit Wizards and Sorcerers.', cost:'', needs:['ruins-of-ales-past'] },
-          { id:'intricate-mechanism', name:'Intricate Mechanism', desc:'Can recruit Artificers.', cost:'', needs:['ruins-of-ales-past'] }
-        ]},
-        { label:'How high you can recruit', items:[
+        { label:'Quality', items:[
           { id:'ruins-of-tales-past', name:'Ruins of Tales Past', desc:'Can recruit level 1 newcomers.', cost:'Free', needs:['bld-tavern'] },
           { id:'creaky-bar', name:'Creaky Bar', desc:'Can recruit level 2 newcomers.', cost:'100g', needs:['ruins-of-tales-past'], replaces:'ruins-of-tales-past' },
-          { id:'unstable-barstools', name:'Unstable Barstools', desc:'Can recruit level 3 newcomers.', cost:'300g', needs:['creaky-bar'], replaces:'creaky-bar' },
-          { id:'comfortable-chairs', name:'Comfortable Chairs', desc:'Can recruit level 4 newcomers.', cost:'1000g', needs:['unstable-barstools','lumber-mill'], replaces:'unstable-barstools' },
-          { id:'ornamental-windows', name:'Ornamental Windows', desc:'Can recruit level 5 newcomers.', cost:'3000g', needs:['comfortable-chairs'], replaces:'comfortable-chairs' },
-          { id:'mahogany-floorboards', name:'Mahogany Floorboards', desc:'Can recruit level 6 newcomers.', cost:'10000g', needs:['ornamental-windows'], replaces:'ornamental-windows' },
-          { id:'automated-taps', name:'Automated Taps', desc:'Can recruit level 7 newcomers.', cost:'15000g', needs:['mahogany-floorboards','blacksmith'], replaces:'mahogany-floorboards' },
-          { id:'acoustic-optimization', name:'Acoustic Optimization', desc:'Can recruit level 8 newcomers.', cost:'30000g', needs:['automated-taps'], replaces:'automated-taps' },
-          { id:'automated-bouncer-bot', name:'Automated Bouncer-Bot', desc:'Can recruit level 9 newcomers.', cost:'50000g', needs:['acoustic-optimization'], replaces:'acoustic-optimization' }
+          // id kept from when this rung was called Unstable Barstools, so a
+          // guild that already bought it keeps its tick
+          { id:'unstable-barstools', name:'Spread the Word', desc:'Can recruit level 3 newcomers.', cost:'300g', needs:['creaky-bar'], attr:{ CHA:15 }, replaces:'creaky-bar' },
+          { id:'local-advertising', name:'Local Advertising', desc:'Can recruit level 4 newcomers.', cost:'1000g', needs:['unstable-barstools','lumber-mill'], attr:{ CHA:20 }, replaces:'unstable-barstools' },
+          { id:'ornamental-windows', name:'Ornamental Windows', desc:'Can recruit level 5 newcomers.', cost:'3000g', needs:['local-advertising'], attr:{ CHA:25 }, replaces:'local-advertising' },
+          { id:'mahogany-floorboards', name:'Mahogany Floorboards', desc:'Can recruit level 6 newcomers.', cost:'10000g', needs:['ornamental-windows'], attr:{ CHA:30 }, replaces:'ornamental-windows' },
+          { id:'automated-taps', name:'Automated Taps', desc:'Can recruit level 7 newcomers.', cost:'15000g', needs:['mahogany-floorboards','blacksmith'], attr:{ CHA:40 }, replaces:'mahogany-floorboards' },
+          { id:'acoustic-optimization', name:'Acoustic Optimization', desc:'Can recruit level 8 newcomers.', cost:'30000g', needs:['automated-taps'], attr:{ CHA:50 }, replaces:'automated-taps' },
+          { id:'automated-bouncer-bot', name:'Automated Bouncer-Bot', desc:'Can recruit level 9 newcomers.', cost:'50000g', needs:['acoustic-optimization'], attr:{ CHA:60 }, replaces:'acoustic-optimization' }
+        ]},
+        { label:'Decor', items:[
+          { id:'ruins-of-ales-past', name:'Ruins of Ales Past', desc:'Can recruit Fighters, Rangers, and Rogues.', cost:'Free', needs:['bld-tavern'] },
+          { id:'holy-icon', name:'Holy Icon', desc:'Can recruit Clerics and Paladins.', cost:'', relic:'Holy Icon', needs:['ruins-of-ales-past'] },
+          { id:'eldritch-idol', name:'Eldritch Idol', desc:'Can recruit Warlocks.', cost:'', relic:'Eldritch Idol', needs:['ruins-of-ales-past'] },
+          { id:'totemic-lodestone', name:'Totemic Lodestone', desc:'Can recruit Druids and Barbarians.', cost:'', relic:'Totemic Lodestone', needs:['ruins-of-ales-past'] },
+          { id:'singing-bowl', name:'Singing Bowl', desc:'Can recruit Bards and Monks.', cost:'', relic:'Singing Bowl', needs:['ruins-of-ales-past'] },
+          { id:'arcane-orrery', name:'Arcane Orrery', desc:'Can recruit Wizards and Sorcerers.', cost:'', relic:'Arcane Orrery', needs:['ruins-of-ales-past'] },
+          { id:'intricate-mechanism', name:'Intricate Mechanism', desc:'Can recruit Artificers.', cost:'', relic:'Intricate Mechanism', needs:['ruins-of-ales-past'] }
         ]}
       ]
     },
 
-    { id:'warehouse', title:'Warehouse', intro:null, gate:'bld-warehouse',
+    { id:'warehouse', title:'Warehouse', intro:'Leave resources for the heroes who might need it most.', gate:'bld-warehouse',
       groups:[
         { label:'Coin', items:[
           { id:'improvised-chest', name:'Improvised Chest', desc:'Can deposit coins for other future adventurers to use as they wish.', cost:'10g', needs:['bld-warehouse'], panel:'chest' },
-          { id:'enchanted-chest', name:'Enchanted Chest', desc:'Can deposit coins for other future adventurers. When making a deposit, you can enchant those coins to only be taken out by a specific player, for a specific purpose, or other stipulation.', cost:'100g', by:'a sorcerer, wizard, warlock, or artificer', needs:['improvised-chest','lumber-mill'], replaces:'improvised-chest', panel:'chest' },
-          { id:'marble-piggy', name:'Marble Piggy', desc:"Any player can deposit coins inside. Each session the amount inside grows by 10%, though you can't see how much is in there. Any two adventurers may put their strength together and smash it whenever they want.", cost:'50g', by:'a paladin or cleric', needs:['bld-warehouse'] }
+          { id:'enchanted-chest', name:'Enchanted Chest', desc:'Can deposit coins for other future adventurers. When making a deposit, you can enchant those coins to only be taken out by a specific player, for a specific purpose, or other stipulation.', cost:'100g', by:'a sorcerer, wizard, warlock, or artificer', needs:['improvised-chest','lumber-mill'], replaces:'improvised-chest', panel:'chest', enchanted:true },
+          { id:'marble-piggy', name:'Marble Piggy', desc:"Any hero can deposit coins inside. Each session the amount inside grows by 10%, though you can't see how much is in there. Any two adventurers may put their strength together and smash it whenever they want.", cost:'50g', by:'a paladin or cleric', needs:['bld-warehouse'] }
         ]},
         { label:'Gear', items:[
-          { id:'improvised-armory', name:'Improvised Armory', desc:'Can deposit non-magical items, pieces of armor, and weapons for other adventurers to use as they wish.', cost:'20g', needs:['bld-warehouse'], panel:'armory' },
-          { id:'arcane-armory', name:'Arcane Armory', desc:'Can now deposit magical items that do not require attunement.', cost:'200g', needs:['improvised-armory','lumber-mill'], replaces:'improvised-armory', panel:'armory' }
+          { id:'improvised-armory', name:'Improvised Armory', desc:'Can deposit some non-magical items, pieces of armor, and weapons for other adventurers to use as they wish.', cost:'20g', needs:['bld-warehouse'], panel:'armory' },
+          { id:'arcane-armory', name:'Arcane Armory', desc:'You can now deposit magical items that do not require attunement into the chest.', cost:'200g', needs:['improvised-armory','lumber-mill'], replaces:'improvised-armory', panel:'armory' }
         ]},
         { label:'Knowledge', items:[
-          { id:'communal-tome', name:'Communal Tome', desc:'Wizards can write down spells in this tome, which can then be copied by other (future) wizards.', cost:'200g', by:'a wizard', needs:['bld-warehouse','lumber-mill'] }
+          { id:'communal-tome', name:'Communal Tome', desc:'Wizards can write down spells in this tome, which can then be copied by other wizards.', cost:'200g', by:'a wizard', needs:['bld-warehouse','arcane-orrery','lumber-mill'], panel:'tome' }
         ]}
       ]
     },
 
+    /* The shop. Each upgrade here puts its `stock` on the Shopping shelves;
+       nothing is bought in this wing itself, it only decides what the
+       Shopping section has to offer. */
+    { id:'merchant', title:"Merchant's Wing", intro:'Whatever an adventurer might ever need.', gate:'bld-merchant',
+      groups:[
+        { label:'The shelves', items:[
+          { id:'basic-supplies', name:'Basic Supplies', desc:"The shop adds basic adventurer's supplies.", cost:'Free', needs:['bld-merchant'],
+            stock:[
+              { name:'Rope', cat:'misc', cost:'1g/foot' },
+              { name:'Torch', cat:'misc', cost:'5g' },
+              { name:'Meagre Ration', cat:'consumables', cost:'5g', desc:'Allows spending 1 hit die' },
+              { name:'Dagger', cat:'weapons', cost:'5g', desc:'1d4 piercing, simple, finesse, light, thrown (20/60)' }
+            ] },
+          { id:'weapons-rack', name:'Weapons Rack', desc:'The shop adds a collection of basic weapons.', cost:'50g', needs:['basic-supplies'], attr:{ STR:20 },
+            stock:[
+              { name:'Quarterstaff', cat:'weapons', cost:'20g', desc:'1d6 bludgeoning, versatile (1d8)' },
+              { name:'Spear', cat:'weapons', cost:'10g', desc:'1d6 piercing, simple, thrown (20/60), versatile (1d8)' },
+              { name:'Crossbow', cat:'weapons', cost:'25g', desc:'1d8 piercing, simple, range (80/320, two-handed)' }
+            ] }
+        ]}
+      ]
+    },
+
+    /* The Workshop is where Barrelbot modules are bought. A module carries a
+       `bot` block naming the slot it fits and what it contributes; the
+       Barrelbot section reads those to fill its frame and its readout.
+       Modules do not replace each other - they are swapped, not upgraded
+       over, so every bought module stays available to equip. */
     { id:'workshop', title:'Workshop', intro:null, gate:'bld-workshop',
       groups:[
-        { label:'Constructs', items:[
-          { id:'modular-barrelbot', name:'Modular Barrelbot', desc:'The Guild gains access to a modular construct controlled by the party. Develop and swap out its modules to suit the needs of your current mission.', cost:'50g', by:'an artificer', needs:['bld-workshop'] }
+        { label:'The Barrelbot', items:[
+          { id:'modular-barrelbot', name:'Modular Barrelbot', desc:'The Guild gains access to a modular construct which is controlled by the party. Develop and swap out its modules to suit the needs of your current mission.', cost:'50g', by:'an artificer', needs:['bld-workshop'], attr:{ STR:15 } }
         ]},
-        { label:'Weapon work', items:[
-          { id:'belt-driven-whetstone', name:'Belt-Driven Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +1.', cost:'200g', by:'an artificer', needs:['bld-workshop'] },
-          { id:'self-turning-whetstone', name:'Self-Turning Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +2.', cost:'600g', by:'an artificer or sorcerer', needs:['belt-driven-whetstone','lumber-mill'], replaces:'belt-driven-whetstone' },
-          { id:'arcane-whetstone', name:'Arcane Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +3.', cost:'2000g', by:'an artificer and a wizard', needs:['self-turning-whetstone','blacksmith'], replaces:'self-turning-whetstone' }
+        { label:'Barrelbot · Head', float:true, items:[
+          { id:'lantern-head', name:'Lantern Head', desc:'Unlocks a special passive ability: the Barrelbot emits 10 ft. of light.', cost:'Free', needs:['modular-barrelbot'],
+            bot:{ slot:'head', special:'Emits 10 ft. of light.' } },
+          { id:'sonar-replicator', name:'Sonar Replicator', desc:'Unlocks a special ability: the Barrelbot, when asked, can record and replay any sound it hears, up to 1 minute in length.', cost:'50g', by:'a bard', needs:['modular-barrelbot'],
+            bot:{ slot:'head', special:'When asked, records and replays any sound it hears, up to 1 minute in length.' } }
         ]},
-        { label:'Armour work', items:[
-          { id:'weakpoint-searching-pliers', name:'Weakpoint-Searching Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +1.', cost:'300g', by:'an artificer', needs:['bld-workshop'] },
-          { id:'weakpoint-detection-pliers', name:'Weakpoint Detection Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +2.', cost:'1000g', by:'an artificer or sorcerer', needs:['weakpoint-searching-pliers','lumber-mill'], replaces:'weakpoint-searching-pliers' },
+        { label:'Barrelbot · Body', float:true, items:[
+          { id:'rickety-chassis', name:'Rickety Chassis', desc:'14 base armour, 30 HP.', cost:'Free', needs:['modular-barrelbot'],
+            bot:{ slot:'chassis', ac:14, hp:30 } },
+          { id:'hardwood-chassis', name:'Hardwood Chassis', desc:'15 base armour, 40 HP.', cost:'50g', needs:['modular-barrelbot'], attr:{ STR:15 },
+            bot:{ slot:'chassis', ac:15, hp:40 } }
+        ]},
+        { label:'Barrelbot · Right Hand', float:true, items:[
+          { id:'clobbering-stone', name:'Clobbering Stone', desc:'+4 to-hit, 1d8+2 bludgeoning damage.', cost:'Free', needs:['modular-barrelbot'],
+            bot:{ slot:'right', hit:4, dmg:'1d8+2', types:'Bludgeoning' } },
+          { id:'thorn-barbed-club', name:'Thorn-barbed Club', desc:'+6 to-hit, 1d12+4 bludgeoning or slashing damage.', cost:'50g', by:'a druid', needs:['modular-barrelbot'],
+            bot:{ slot:'right', hit:6, dmg:'1d12+4', types:'Bludgeoning or slashing' } }
+        ]},
+        { label:'Barrelbot · Left Hand', float:true, items:[
+          { id:'shovel-hand', name:'Shovel Hand', desc:'Unlocks a special ability. As an action, choose a Medium or smaller creature. While you move directly towards it this turn, it shoves the creature in front of it with you.', cost:'Free', needs:['modular-barrelbot'],
+            bot:{ slot:'left', special:'As an action, choose a Medium or smaller creature. While you move directly towards it this turn, it shoves the creature in front of it with you.' } },
+          { id:'living-vines', name:'Living Vines', desc:'Unlocks a special ability. As an action, choose an ally within 15 ft. The vine extends to them and yanks them back until they are next to the Barrelbot.', cost:'50g', by:'a druid', needs:['modular-barrelbot'],
+            bot:{ slot:'left', special:'As an action, choose an ally within 15 ft. The vine extends to them and yanks them back until they are next to the Barrelbot.' } }
+        ]},
+        { label:'Barrelbot · Legs', float:true, items:[
+          { id:'unstable-legs', name:'Unstable Legs', desc:'15 ft. movement speed.', cost:'Free', needs:['modular-barrelbot'],
+            bot:{ slot:'legs', speed:15 } },
+          { id:'stabilized-legs', name:'Stabilized Legs', desc:'20 ft. movement speed.', cost:'50g', needs:['modular-barrelbot'], attr:{ INT:20 },
+            bot:{ slot:'legs', speed:20 } }
+        ]},
+        { label:'Armament Upgrades', items:[
+          { id:'belt-driven-whetstone', name:'Belt-Driven Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +1.', cost:'200g', by:'an artificer', needs:['bld-workshop'], attr:{ STR:20 } },
+          { id:'self-turning-whetstone', name:'Self-Turning Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +2.', cost:'600g', by:'an artificer or sorcerer', needs:['belt-driven-whetstone','lumber-mill'], attr:{ INT:20 }, replaces:'belt-driven-whetstone' },
+          { id:'arcane-whetstone', name:'Arcane Whetstone', desc:'Any adventurer can upgrade any nonmagical weapon to +3.', cost:'2000g', by:'an artificer and a wizard', needs:['self-turning-whetstone','blacksmith'], replaces:'self-turning-whetstone' },
+          { id:'weakpoint-searching-pliers', name:'Weakpoint-Searching Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +1.', cost:'300g', by:'an artificer', needs:['bld-workshop'], attr:{ STR:20 } },
+          { id:'weakpoint-detection-pliers', name:'Weakpoint Detection Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +2.', cost:'1000g', by:'an artificer or sorcerer', needs:['weakpoint-searching-pliers','lumber-mill'], attr:{ INT:20 }, replaces:'weakpoint-searching-pliers' },
           { id:'animated-pliers', name:'Animated Pliers', desc:'Any adventurer can upgrade any nonmagical armor to +3.', cost:'3500g', by:'an artificer and a wizard', needs:['weakpoint-detection-pliers','blacksmith'], replaces:'weakpoint-detection-pliers' }
         ]}
       ]
@@ -694,7 +1254,7 @@
     { id:'altar', title:'Altar', intro:null, gate:'bld-altar',
       groups:[
         { label:'Offerings', items:[
-          { id:'improvised-collection-bowl', name:'Improvised Collection Bowl', desc:"Commoners visit the Guild on their travels and might leave a small donation to rebuild the charred ruins. +50g into the Guild's coffers at the start of each session.", cost:'50g', by:'a paladin or cleric', needs:['bld-altar'] },
+          { id:'improvised-collection-bowl', name:'Improvised Collection Bowl', desc:"Commoners visit the Guild on their travels, and might leave a small donation to rebuild the charred ruins. +50g into the Guild's coffers at the start of each session.", cost:'50g', by:'a paladin or cleric', needs:['bld-altar'] },
           { id:'ornate-collection-bowl', name:'Ornate Collection Bowl', desc:"Visiting the Phoenix Guild has become somewhat of a local attraction. +200g into the Guild's coffers at the start of each session.", cost:'500g', by:'a paladin or cleric', needs:['improvised-collection-bowl','lumber-mill'], replaces:'improvised-collection-bowl' },
           { id:'resplendent-collection-bowl', name:'Resplendent Collection Bowl', desc:"Visiting the Phoenix Guild has become a pilgrimage among the local nobility. +500g into the Guild's coffers at the start of each session.", cost:'1500g', by:'a paladin or cleric', needs:['ornate-collection-bowl','blacksmith'], replaces:'ornate-collection-bowl' }
         ]},
@@ -726,6 +1286,26 @@
   ];
 
   /* ==============================================================
+     THE HOUSE OF STEWARDSHIP
+
+     Not a list of upgrades but a roster. Every hero retired here
+     leaves one stat behind, and the sum of those stats is what the
+     rest of the ledger measures its attribute requirements against.
+     ============================================================== */
+  const STEWARD = {
+    id:'stewardship', title:'House of Stewardship', kind:'stewardship', gate:'bld-stewardship',
+    intro:'Adventurers who have seen enough action can still live a peaceful and productive life in the halls of the Phoenix Guild. The doors are always open to those with ready hands, sharp minds, and golden tongues.',
+    stats:[
+      { key:'STR', name:'Strength', desc:'Strength allows the guild to create better weapons, armor, and combat training.' },
+      { key:'INT', name:'Intelligence', desc:'Intelligence allows the guild to create more advanced and ingenious upgrades.' },
+      { key:'CHA', name:'Charisma', desc:'Charisma allows the guild to create better relationships with other factions.' }
+    ]
+  };
+  const STAT_KEYS = STEWARD.stats.map(s => s.key);
+  const STAT_NAME = {};
+  STEWARD.stats.forEach(s => { STAT_NAME[s.key] = s.name; });
+
+  /* ==============================================================
      THE DERIVED SECTIONS
 
      Nothing here is checked off. Each entry watches a chain of
@@ -733,8 +1313,9 @@
      so these two sections are always a readout of what the party
      can do tonight. tiers run weakest first - the last built one wins.
      ============================================================== */
-  const SUMMARY = [
-    { id:'resting', title:'Resting Bonuses', kind:'summary',
+  const RESTING = { id:'resting', title:'Resting at the Guild', kind:'summary',
+    groups:[
+    { id:'resting-bonuses', label:'Resting Bonuses',
       intro:'What a long rest at the guild is worth right now.',
       entries:[
         { label:'Safe sleep', tiers:[
@@ -742,9 +1323,9 @@
           { id:'mahogany-beds', text:'No risk of a nightly ambush, and a real bed to show for it.' }
         ]},
         { label:'Exhaustion', tiers:[
-          { id:'linen-sheets', text:'\u22121 exhaustion for the night.' },
-          { id:'satin-sheets', text:'\u22122 exhaustion for the night.' },
-          { id:'heavenly-sheets', text:'\u22123 exhaustion for the night.' }
+          { id:'linen-sheets', text:'−1 exhaustion for the night.' },
+          { id:'satin-sheets', text:'−2 exhaustion for the night.' },
+          { id:'heavenly-sheets', text:'−3 exhaustion for the night.' }
         ]},
         { label:'Temporary HP', tiers:[
           { id:'fluffy-pillows', text:'+5 temp HP on waking.' },
@@ -761,12 +1342,12 @@
           { id:'mahogany-beds', text:'Two wakeup actions each, after a long rest here.' }
         ]},
         { label:'Away from camp', tiers:[
-          { id:'portable-tent', text:'One long rest outside camp: \u22121 exhaustion, +5 temp HP, +1 hit die.' },
-          { id:'foldable-camp', text:'One long rest outside camp: \u22122 exhaustion, +10 temp HP, +2 hit dice.' }
+          { id:'portable-tent', text:'One long rest outside camp: −1 exhaustion, +5 temp HP, +1 hit die.' },
+          { id:'foldable-camp', text:'One long rest outside camp: −2 exhaustion, +10 temp HP, +2 hit dice.' }
         ]}
       ]
     },
-    { id:'wakeup', title:'Wakeup Actions', kind:'summary',
+    { id:'wakeup', label:'Wakeup Actions', counter:true,
       intro:'What a hero may spend a wakeup action on after a long rest.',
       entries:[
         { label:'Healing Poultice', tiers:[
@@ -794,21 +1375,76 @@
         ]}
       ]
     }
-  ];
+  ]};
 
-  // The guild first, then the two readouts, then the wings.
-  const SECTIONS = [DATA[0], SUMMARY[0], SUMMARY[1]].concat(DATA.slice(1));
+  /* ==============================================================
+     THE BARRELBOT
+
+     Opens once the Modular Barrelbot is bought. Five slots laid out
+     as a body; each is filled from the modules the Workshop has
+     already produced. What is bolted on decides the readout above.
+     ============================================================== */
+  const BARRELBOT = {
+    id:'barrelbot', title:'Barrelbot', kind:'barrelbot', gate:'modular-barrelbot',
+    intro:'The Guild’s trusty and dependable construct, named…',
+    slots:[
+      { key:'head',    label:'Head' },
+      { key:'left',    label:'Left Hand' },
+      { key:'chassis', label:'Chassis' },
+      { key:'right',   label:'Right Hand' },
+      { key:'legs',    label:'Legs' }
+    ],
+    // row by row, with the corners left blank on purpose
+    frame:[ null,'head',null, 'left','chassis','right', null,'legs',null ]
+  };
+  const SLOT_LABEL = {};
+  BARRELBOT.slots.forEach(s => { SLOT_LABEL[s.key] = s.label; });
+  const BOT_DEFAULT_NAME = 'Barry';
+
+  /* ==============================================================
+     SHOPPING
+
+     The shelves of the Merchant's Wing. Nothing here is checked off:
+     each upgrade bought in that wing puts its stock out, and this
+     section is only ever a list of what is currently for sale.
+     ============================================================== */
+  const SHOP = {
+    id:'shopping', title:'Shopping', kind:'shop', gate:'bld-merchant',
+    intro:'What the Merchant’s Wing has on its shelves right now.',
+    cats:[
+      { key:'consumables', label:'Consumables' },
+      { key:'weapons', label:'Weapons' },
+      { key:'armor', label:'Armor' },
+      { key:'trinkets', label:'Trinkets' },
+      { key:'misc', label:'Miscellaneous' }
+    ]
+  };
+
+  // The order the wings are read in, as the guild's own notes have them.
+  const BY_ID = {};
+  DATA.forEach(b => { BY_ID[b.id] = b; });
+  const SECTIONS = [
+    BY_ID.guild, RESTING, BARRELBOT, BY_ID.warehouse, STEWARD, SHOP,
+    BY_ID.inn, BY_ID.tavern, BY_ID.workshop, BY_ID.altar, BY_ID.botanist,
+    BY_ID.merchant
+  ];
 
   /* ---------- index ---------- */
   const ITEM = {};
   const REPLACED_BY = {};
   const ALL_IDS = [];
+  const BOT_MODULES = {};   // slot key -> the modules that fit it
   DATA.forEach(b => b.groups.forEach(g => g.items.forEach(it => {
     it._building = b.id;
     ITEM[it.id] = it;
     ALL_IDS.push(it.id);
     if(it.replaces){ (REPLACED_BY[it.replaces] = REPLACED_BY[it.replaces] || []).push(it.id); }
+    if(it.bot){ (BOT_MODULES[it.bot.slot] = BOT_MODULES[it.bot.slot] || []).push(it); }
   })));
+
+  // 'Free' is worth nothing, '1000g' is worth a thousand - used to sort a
+  // slot's modules from the priciest the guild owns down to the cheapest.
+  const goldOf = it => parseInt(String(it.cost || '').replace(/[^0-9]/g, ''), 10) || 0;
 
   const nameOf = id => (ITEM[id] ? ITEM[id].name : id);
 
@@ -831,6 +1467,10 @@
   const HIGHER_HAND = 'A Higher Hand';
   const DM_KEY = 'guildhall-dm';
   let dmMode = false;
+  // Shows only what the guild has yet to buy. A row carrying a panel - the
+  // chest, the racks, the tome - stays put: that is the guild's property in
+  // daily use, not a line still waiting to be ticked.
+  let leanMode = false;
 
   function todaysCode(){
     const d = new Date();
@@ -840,11 +1480,31 @@
   let state = {};      // id -> true, the checkmarks
   let builders = {};   // id -> who built it
   let rack = {};       // slot number -> what is on the rack
-  let coin = 0;        // gold in the chest
+  let coin = 0;        // loose gold in the chest
+  let bound = {};      // key -> { gold, words } for coins under an enchantment
+  let stewards = {};   // key -> { name, stat, amount } for the retired
+  let stats = { STR:0, INT:0, CHA:0 };
+  let botkit = {};     // slot key -> the module id bolted on
+  let botName = '';    // what the party calls the construct
+  let botTitles = {};  // key -> { text } for the names it has earned
+  let tome = {};       // key -> { name } for the spells written down
+
+  // The one sentence every attribute requirement is written in.
+  function attrPhrase(key, min, have){
+    return 'Requires ' + min + ' ' + (STAT_NAME[key] || key) + ' in the House of Stewardship'
+      + (have === null || have === undefined ? '' : ' · The Guild has: ' + have);
+  }
+
+  // Ghost text for the words laid on a stash of coins.
+  const ENCHANT_HINTS = [
+    'can only be spent on guild upgrades',
+    'can only be retrieved by Tim',
+    'can only be retrieved by a warlock'
+  ];
+  const randomHint = () => ENCHANT_HINTS[Math.floor(Math.random() * ENCHANT_HINTS.length)];
   let pendingId = null;
   const openState = {};
-  // (SECTIONS is built further down, so this runs over DATA and the two
-  // readouts are added when the DOM is built.)
+  let folkOpen = false;
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -852,11 +1512,34 @@
 
   /* ---------- rules ---------- */
   const isBuilt = id => !!state[id];
+
+  // What the House of Stewardship currently holds.
+  function recalcStats(){
+    const t = { STR:0, INT:0, CHA:0 };
+    Object.keys(stewards).forEach(k => {
+      const s = stewards[k] || {};
+      const n = parseInt(s.amount, 10);
+      if(t[s.stat] !== undefined && n > 0) t[s.stat] += n;
+    });
+    stats = t;
+    return t;
+  }
+
   function needsMet(it){
     const all = (it.needs || []).every(isBuilt);
     const any = !it.needsAny || !it.needsAny.length || it.needsAny.some(isBuilt);
     return all && any;
   }
+
+  // An attribute requirement is checked separately from needsMet on purpose:
+  // needsMet decides whether a row is on the page at all, attrMet only decides
+  // whether the stamp will take a mark. A row short on Strength is fully
+  // visible, priced and described - it simply cannot be ticked yet.
+  function attrMet(it){
+    if(!it.attr) return true;
+    return Object.keys(it.attr).every(k => (stats[k] || 0) >= it.attr[k]);
+  }
+
   function supersededBy(it){
     if(it.global) return null;
     const winners = (REPLACED_BY[it.id] || []).filter(isBuilt);
@@ -867,6 +1550,8 @@
   function renderChips(it){
     let out = '';
     if(it.by) out += '<span class="chip by">Requires ' + escapeHtml(it.by) + '</span>';
+    if(it.relic) out += '<span class="chip note">Requires: ' + escapeHtml(it.relic)
+      + ' (obtainable by completing a certain quest)</span>';
     if(it.note) out += '<span class="chip note">' + escapeHtml(it.note) + '</span>';
     (it.needs || []).forEach(n => {
       const isUpgrade = n === it.replaces;
@@ -876,6 +1561,12 @@
     if(it.needsAny && it.needsAny.length){
       out += '<span class="chip need" data-need-any="' + escapeHtml(it.needsAny.join(',')) + '">Needs '
         + it.needsAny.map(id => escapeHtml(nameOf(id))).join(' or ') + '</span>';
+    }
+    if(it.attr){
+      Object.keys(it.attr).forEach(k => {
+        out += '<span class="chip attr" data-attr="' + k + '" data-attr-min="' + it.attr[k] + '">'
+          + escapeHtml(attrPhrase(k, it.attr[k], null)) + '</span>';
+      });
     }
     out += '<span class="chip superseded" hidden></span>';
     return '<span class="chips">' + out + '</span>';
@@ -908,7 +1599,7 @@
     if(it.panel === 'armory'){
       let slots = '';
       for(let i = 1; i <= 10; i++){
-        slots += '<input class="slot" type="text" maxlength="60" data-slot="' + i + '"'
+        slots += '<input class="slot" type="text" maxlength="50" data-slot="' + i + '"'
           + ' placeholder="' + i + '" aria-label="Rack slot ' + i + '" />';
       }
       return '<div class="panel" data-panel="armory" hidden>'
@@ -916,17 +1607,35 @@
         + '<div class="slots">' + slots + '</div>'
         + '</div>';
     }
-    return '<div class="panel" data-panel="chest" hidden>'
+    if(it.panel === 'tome'){
+      return '<div class="panel" data-panel="tome" hidden>'
+        + '<div class="folk" id="tome">'
+          + '<button class="folk-head" type="button" aria-expanded="false" aria-controls="tome-list">'
+            + CHEV_SVG
+            + '<span class="folk-title">Spells written down</span>'
+            + '<span class="folk-count" id="tome-count">0</span>'
+          + '</button>'
+          + '<div class="folk-body" id="tome-list"><div class="folk-inner"><div class="folk-pad">'
+            + '<button type="button" class="btn ghost small" id="write-spell">Write spell</button>'
+            + '<div id="spell-rows"></div>'
+          + '</div></div></div>'
+        + '</div>'
+      + '</div>';
+    }
+    return '<div class="panel" data-panel="chest"' + (it.enchanted ? ' data-enchanted="1"' : '') + ' hidden>'
       + '<div class="coin"><span class="coin-num">0</span><span class="coin-label">gold in the chest</span></div>'
       + '<div class="coin-actions">'
         + '<button type="button" class="btn ghost small" data-coin="deposit">Deposit</button>'
         + '<button type="button" class="btn ghost small" data-coin="withdraw">Withdraw</button>'
       + '</div>'
+      + (it.enchanted
+          ? '<div class="bound-head">Enchanted coins <span data-bound-total></span></div><div data-bound></div>'
+          : '')
       + '</div>';
   }
 
   function renderGroup(g){
-    return '<div class="group' + (g.guildhall ? ' guildhall' : '') + '">'
+    return '<div class="group' + (g.guildhall ? ' guildhall' : '') + (g.float ? ' floats' : '') + '">'
       + (g.label ? '<div class="group-label">' + escapeHtml(g.label) + '</div>' : '')
       + g.items.map(renderRow).join('')
       + '</div>';
@@ -949,23 +1658,70 @@
       + '</section>';
   }
 
-  function renderSummary(sec){
-    const lines = sec.entries.map((e, i) =>
-      '<div class="sline off" data-sum="' + sec.id + '" data-entry="' + i + '">'
-        + '<span class="sline-mark"></span>'
-        + '<span class="sline-text">'
-          + '<span class="sline-top">'
-            + '<span class="sline-label">' + escapeHtml(e.label) + '</span>'
-            + '<span class="sline-src"></span>'
-          + '</span>'
-          + '<span class="sline-desc"></span>'
-        + '</span>'
+  function renderStewardship(sec){
+    const cards = sec.stats.map(s =>
+      '<div class="stat-card">'
+        + '<div class="stat-top">'
+          + '<span class="stat-key">' + s.key + '</span>'
+          + '<span class="stat-num" data-stat-num="' + s.key + '">0</span>'
+        + '</div>'
+        + '<p class="stat-desc">' + escapeHtml(s.desc) + '</p>'
       + '</div>').join('');
 
-    const counter = sec.id === 'wakeup'
-      ? '<div class="wakeup-count"><span class="wakeup-num" id="wakeup-num">0</span>'
-        + '<span class="wakeup-label" id="wakeup-label"></span></div>'
-      : '';
+    return '<section class="building steward" id="b-' + sec.id + '">'
+      + '<button class="building-head" type="button" aria-expanded="true" aria-controls="body-' + sec.id + '" data-building="' + sec.id + '">'
+        + CHEV_SVG
+        + '<h2>' + escapeHtml(sec.title) + '</h2>'
+        + '<span class="count" data-count="' + sec.id + '"></span>'
+      + '</button>'
+      + '<div class="building-body" id="body-' + sec.id + '"><div class="building-inner"><div class="pad">'
+        + '<p class="intro">' + escapeHtml(sec.intro) + '</p>'
+        + '<p class="empty-note">Raise the <strong>' + escapeHtml(nameOf(sec.gate)) + '</strong> in The Phoenix Guild first.</p>'
+        + '<div class="steward-body">'
+          + '<button type="button" class="btn primary" id="retire-btn">Retire hero</button>'
+          + '<div class="stats">' + cards + '</div>'
+          + '<div class="folk" id="folk">'
+            + '<button class="folk-head" type="button" aria-expanded="false" aria-controls="folk-list">'
+              + CHEV_SVG
+              + '<span class="folk-title">Guildsfolk</span>'
+              + '<span class="folk-count" id="folk-count">0</span>'
+            + '</button>'
+            + '<div class="folk-body" id="folk-list"><div class="folk-inner"><div class="folk-pad" id="folk-rows"></div></div></div>'
+          + '</div>'
+        + '</div>'
+      + '</div></div></div>'
+      + '</section>';
+  }
+
+  // One wing, two readouts inside it: what a rest is worth, and what the
+  // wakeup actions it grants can be spent on.
+  function renderSummary(sec){
+    const groups = sec.groups.map(g => {
+      const lines = g.entries.map((e, i) =>
+        '<div class="sline off" data-sum="' + g.id + '" data-entry="' + i + '">'
+          + '<span class="sline-mark"></span>'
+          + '<span class="sline-text">'
+            + '<span class="sline-top">'
+              + '<span class="sline-label">' + escapeHtml(e.label) + '</span>'
+              + '<span class="sline-src"></span>'
+            + '</span>'
+            + '<span class="sline-desc"></span>'
+          + '</span>'
+        + '</div>').join('');
+
+      const counter = g.counter
+        ? '<div class="wakeup-count"><span class="wakeup-num" id="wakeup-num">0</span>'
+          + '<span class="wakeup-label" id="wakeup-label"></span></div>'
+        : '';
+
+      return '<div class="group" data-group="' + g.id + '">'
+        + '<div class="group-label">' + escapeHtml(g.label) + '</div>'
+        + '<p class="intro">' + escapeHtml(g.intro) + '</p>'
+        + counter
+        + '<p class="summary-empty" data-empty="' + g.id + '" hidden></p>'
+        + lines
+      + '</div>';
+    }).join('');
 
     return '<section class="building summary" id="b-' + sec.id + '">'
       + '<button class="building-head" type="button" aria-expanded="true" aria-controls="body-' + sec.id + '" data-building="' + sec.id + '">'
@@ -974,10 +1730,53 @@
         + '<span class="count" data-count="' + sec.id + '"></span>'
       + '</button>'
       + '<div class="building-body" id="body-' + sec.id + '"><div class="building-inner"><div class="pad">'
+        + '<p class="empty-note">Build the <strong>Stack of Hay</strong> in the Firebird Inn first.</p>'
+        + groups
+      + '</div></div></div>'
+      + '</section>';
+  }
+
+  function renderBarrelbot(sec){
+    const readout = [
+      ['ac','Armour'], ['hp','Hit Points'], ['hit','To-Hit Roll'],
+      ['dmg','Damage'], ['types','Damage Types'], ['speed','Movement Speed']
+    ].map(p => '<div class="bot-stat">'
+        + '<div class="bot-key">' + p[1] + '</div>'
+        + '<div class="bot-val" data-bot-stat="' + p[0] + '">0</div>'
+      + '</div>').join('');
+
+    const cells = sec.frame.map(key => key
+      ? '<button type="button" class="bot-slot" data-slot="' + key + '">'
+          + '<span class="bot-slot-key">' + escapeHtml(SLOT_LABEL[key]) + '</span>'
+          + '<span class="bot-slot-mod">Empty</span>'
+        + '</button>'
+      : '<span></span>').join('');
+
+    return '<section class="building bot" id="b-' + sec.id + '">'
+      + '<button class="building-head" type="button" aria-expanded="true" aria-controls="body-' + sec.id + '" data-building="' + sec.id + '">'
+        + CHEV_SVG
+        + '<h2>' + escapeHtml(sec.title) + '</h2>'
+        + '<span class="count" data-count="' + sec.id + '"></span>'
+      + '</button>'
+      + '<div class="building-body" id="body-' + sec.id + '"><div class="building-inner"><div class="pad">'
         + '<p class="intro">' + escapeHtml(sec.intro) + '</p>'
-        + counter
-        + '<p class="summary-empty" data-empty="' + sec.id + '" hidden></p>'
-        + lines
+        + '<p class="empty-note">Build the <strong>' + escapeHtml(nameOf(sec.gate)) + '</strong> in the Workshop first.</p>'
+        + '<div class="bot-body">'
+          + '<div class="bot-name-row">'
+            + '<span class="bot-called">'
+              + '<button type="button" class="bot-name" id="bot-name"></button>'
+              + '<span class="bot-titles" id="bot-titles"></span>'
+            + '</span>'
+            + '<button type="button" class="btn ghost small bot-add" id="bot-add-title">Add title</button>'
+          + '</div>'
+          + '<p class="bot-hint">Click a part to bolt on any module the Workshop has built.</p>'
+          + '<div class="bot-summary">' + readout + '</div>'
+          + '<div class="bot-abilities">'
+            + '<div class="group-label">Special abilities</div>'
+            + '<div id="bot-ability-list"></div>'
+          + '</div>'
+          + '<div class="bot-grid">' + cells + '</div>'
+        + '</div>'
       + '</div></div></div>'
       + '</section>';
   }
@@ -989,15 +1788,46 @@
       + '</button>').join('');
   }
 
+  function renderShop(sec){
+    const cats = sec.cats.map(c =>
+      '<div class="group" data-shop="' + c.key + '">'
+        + '<div class="group-label">' + escapeHtml(c.label) + '</div>'
+        + '<div data-shelf="' + c.key + '"></div>'
+      + '</div>').join('');
+
+    return '<section class="building shop" id="b-' + sec.id + '">'
+      + '<button class="building-head" type="button" aria-expanded="true" aria-controls="body-' + sec.id + '" data-building="' + sec.id + '">'
+        + CHEV_SVG
+        + '<h2>' + escapeHtml(sec.title) + '</h2>'
+        + '<span class="count" data-count="' + sec.id + '"></span>'
+      + '</button>'
+      + '<div class="building-body" id="body-' + sec.id + '"><div class="building-inner"><div class="pad">'
+        + '<p class="intro">' + escapeHtml(sec.intro) + '</p>'
+        + '<p class="empty-note">Raise the <strong>' + escapeHtml(nameOf(sec.gate))
+          + '</strong> and stock its shelves first.</p>'
+        + cats
+      + '</div></div></div>'
+      + '</section>';
+  }
+
+  function renderSection(sec){
+    if(sec.kind === 'summary') return renderSummary(sec);
+    if(sec.kind === 'stewardship') return renderStewardship(sec);
+    if(sec.kind === 'barrelbot') return renderBarrelbot(sec);
+    if(sec.kind === 'shop') return renderShop(sec);
+    return renderBuilding(sec);
+  }
+
   function buildStaticDOM(){
     SECTIONS.forEach(sec => { if(openState[sec.id] === undefined) openState[sec.id] = true; });
-    document.getElementById('ledger').innerHTML =
-      SECTIONS.map(sec => sec.kind === 'summary' ? renderSummary(sec) : renderBuilding(sec)).join('');
+    document.getElementById('ledger').innerHTML = SECTIONS.map(renderSection).join('');
     document.getElementById('nav').innerHTML = renderNav();
   }
 
   /* ---------- state -> UI ---------- */
   function applyState(){
+    recalcStats();
+
     const counts = {};
     DATA.forEach(b => { counts[b.id] = { built:0, total:0 }; });
 
@@ -1006,16 +1836,21 @@
       if(!it) return;
       const built = isBuilt(it.id);
       const met = needsMet(it);
+      const enough = attrMet(it);
       const sup = supersededBy(it);
       const locked = !built && !met;
+      // Short on a stat: visible, but the stamp stays empty.
+      const attrLocked = !built && met && !enough;
 
       row.classList.toggle('locked', locked);
+      row.classList.toggle('attr-locked', attrLocked);
       row.classList.toggle('superseded', !!sup);
       row.classList.toggle('hidden', (!!sup || locked) && !it.always);
+      row.classList.toggle('lean-hidden', leanMode && built && !it.panel);
 
       const cb = row.querySelector('.cb');
-      if(pendingId !== it.id) cb.checked = built;   // don't fight the open dialog
-      cb.disabled = locked && !dmMode;              // the DM may reach past the prerequisites
+      if(pendingId !== it.id) cb.checked = built;        // don't fight the open dialog
+      cb.disabled = (locked || attrLocked) && !dmMode;   // the DM may reach past both
 
       const panel = row.querySelector('.panel');
       if(panel) panel.hidden = !built || !!sup;
@@ -1038,18 +1873,30 @@
         chip.classList.toggle('unmet', !ok);
       });
 
+      row.querySelectorAll('.chip.attr').forEach(chip => {
+        const key = chip.dataset.attr;
+        const min = parseInt(chip.dataset.attrMin, 10);
+        const have = stats[key] || 0;
+        const ok = built || have >= min;
+        chip.classList.toggle('unmet', !ok);
+        chip.textContent = attrPhrase(key, min, ok ? null : have);
+      });
+
+      // in a module group, anything still unbought rises above the rest
+      if(row.parentElement.classList.contains('floats')) row.style.order = built ? '1' : '0';
+
       const c = counts[it._building];
       c.total++;
       if(built) c.built++;
     });
 
     document.querySelectorAll('.group').forEach(g => {
-      g.classList.toggle('all-hidden', !g.querySelector('.row:not(.hidden)'));
+      g.classList.toggle('all-hidden', !g.querySelector('.row:not(.hidden):not(.lean-hidden)'));
     });
 
     DATA.forEach(b => {
       const sec = document.getElementById('b-' + b.id);
-      const empty = !sec.querySelector('.row:not(.hidden)');
+      const empty = !sec.querySelector('.row:not(.hidden):not(.lean-hidden)');
       sec.classList.toggle('all-hidden', empty);
       const c = counts[b.id];
       const label = c.built + '/' + c.total;
@@ -1061,11 +1908,222 @@
       }
     });
 
+    applyStewardship();
+    applyBarrelbot();
+    applyShop();
+    applyTome();
     applyPanels();
     applySummaries();
+    markFirstVisible();
 
     const done = ALL_IDS.filter(isBuilt).length;
     document.getElementById('progress-stat').textContent = done + ' of ' + ALL_IDS.length + ' upgrades built';
+  }
+
+  // The rule above a wing marks the seam between two of them, so whichever
+  // wing is currently topmost on the page does without one.
+  function markFirstVisible(){
+    const revealing = document.body.classList.contains('reveal');
+    let first = null;
+    SECTIONS.forEach(sec => {
+      const el = document.getElementById('b-' + sec.id);
+      if(!el) return;
+      el.classList.remove('first-visible');
+      if(!first && (revealing || !el.classList.contains('all-hidden'))) first = el;
+    });
+    if(first) first.classList.add('first-visible');
+  }
+
+  /* ---------- the roster ---------- */
+  function stewardKeys(){
+    return Object.keys(stewards).sort();
+  }
+
+  function applyStewardship(){
+    const open = isBuilt(STEWARD.gate);
+    const keys = stewardKeys();
+
+    STAT_KEYS.forEach(k => {
+      const v = stats[k] || 0;
+      document.querySelectorAll('[data-stat-num="' + k + '"]').forEach(el => { el.textContent = v; });
+      document.querySelectorAll('[data-side-stat="' + k + '"]').forEach(el => { el.textContent = v; });
+    });
+    document.getElementById('side-stats').hidden = !open;
+
+    document.getElementById('folk-count').textContent = keys.length;
+    const rows = document.getElementById('folk-rows');
+    rows.innerHTML = keys.length
+      ? keys.map(k => {
+          const s = stewards[k] || {};
+          const amount = parseInt(s.amount, 10) || 0;
+          return '<div class="folk-row">'
+            + '<span class="folk-name">' + escapeHtml(s.name || 'A nameless hero') + '</span>'
+            + '<span class="folk-gave">+' + amount + ' ' + escapeHtml(s.stat || '') + '</span>'
+            + '<button type="button" class="folk-drop" data-drop="' + escapeHtml(k) + '"'
+              + ' aria-label="Remove ' + escapeHtml(s.name || 'this hero') + '">&times;</button>'
+          + '</div>';
+        }).join('')
+      : '<p class="folk-empty">Nobody has retired to the guild yet.</p>';
+
+    const sec = document.getElementById('b-' + STEWARD.id);
+    sec.classList.toggle('all-hidden', !open);
+    sec.querySelector('[data-count="' + STEWARD.id + '"]').textContent =
+      keys.length + (keys.length === 1 ? ' hero' : ' heroes');
+    const nav = document.querySelector('[data-target="' + STEWARD.id + '"]');
+    if(nav){
+      nav.classList.toggle('all-hidden', !open);
+      nav.querySelector('[data-navcount="' + STEWARD.id + '"]').textContent = keys.length || '';
+    }
+  }
+
+  /* ---------- the construct ---------- */
+  // A slot only counts as filled if the module bolted into it is still one
+  // the guild owns - unticking it in the Workshop empties the slot again.
+  function equipped(slotKey){
+    const id = botkit[slotKey];
+    return (id && ITEM[id] && isBuilt(id)) ? ITEM[id] : null;
+  }
+
+  // What the Workshop has produced for this slot, priciest first.
+  function ownedModules(slotKey){
+    return (BOT_MODULES[slotKey] || []).filter(it => isBuilt(it.id))
+      .slice().sort((a, b) => goldOf(b) - goldOf(a));
+  }
+
+  // Modules for this slot on the Workshop's shelf but not yet paid for.
+  function pendingModules(slotKey){
+    return (BOT_MODULES[slotKey] || []).filter(it => !isBuilt(it.id) && needsMet(it));
+  }
+
+  const botCalled = () => (botName || BOT_DEFAULT_NAME);
+  const titleKeys = () => Object.keys(botTitles).sort();
+
+  // "Barry, the deep, the sushi chef" - the titles in cursive after the name,
+  // each one its own button so it can be reworded or dropped.
+  function applyBotName(){
+    const nameEl = document.getElementById('bot-name');
+    if(!nameEl) return;
+    nameEl.textContent = botCalled();
+    nameEl.setAttribute('aria-label', 'Rename the construct, currently ' + botCalled());
+
+    const keys = titleKeys();
+    document.getElementById('bot-titles').innerHTML = keys.length
+      ? ', ' + keys.map(k => '<button type="button" class="bot-title" data-title="' + escapeHtml(k) + '">'
+          + escapeHtml((botTitles[k] || {}).text || '') + '</button>').join(', ')
+      : '';
+  }
+
+  function applyBarrelbot(){
+    const open = isBuilt(BARRELBOT.gate);
+    const sec = document.getElementById('b-' + BARRELBOT.id);
+    sec.classList.toggle('all-hidden', !open);
+    applyBotName();
+
+    const kit = {};
+    let filled = 0;
+    BARRELBOT.slots.forEach(s => {
+      const mod = equipped(s.key);
+      kit[s.key] = mod;
+      if(mod) filled++;
+      const cell = sec.querySelector('.bot-slot[data-slot="' + s.key + '"]');
+      if(!cell) return;
+      cell.classList.toggle('empty', !mod);
+      cell.classList.toggle('more', !mod && ownedModules(s.key).length > 0);
+      cell.querySelector('.bot-slot-mod').textContent = mod ? mod.name : 'Empty';
+    });
+
+    const chassis = kit.chassis ? kit.chassis.bot : null;
+    const arm = kit.right ? kit.right.bot : null;
+    const legs = kit.legs ? kit.legs.bot : null;
+    const readout = {
+      ac: chassis ? chassis.ac : 0,
+      hp: chassis ? chassis.hp : 0,
+      hit: arm ? '+' + arm.hit : 0,
+      dmg: arm ? arm.dmg : 'None',
+      types: arm ? arm.types : 'None',
+      speed: legs ? legs.speed + ' ft.' : 0
+    };
+    Object.keys(readout).forEach(k => {
+      const el = sec.querySelector('[data-bot-stat="' + k + '"]');
+      if(!el) return;
+      el.textContent = readout[k];
+      el.classList.toggle('none', readout[k] === 0 || readout[k] === 'None');
+    });
+
+    const abilities = BARRELBOT.slots
+      .map(s => kit[s.key])
+      .filter(m => m && m.bot.special);
+    document.getElementById('bot-ability-list').innerHTML = abilities.length
+      ? abilities.map(m => '<div class="bot-ability">'
+          + '<span class="bot-ability-src">' + escapeHtml(m.name) + '</span>'
+          + '<span class="bot-ability-text">' + escapeHtml(m.bot.special) + '</span>'
+        + '</div>').join('')
+      : '<p class="bot-none">None.</p>';
+
+    sec.querySelector('[data-count="' + BARRELBOT.id + '"]').textContent =
+      filled + '/' + BARRELBOT.slots.length;
+    const nav = document.querySelector('[data-target="' + BARRELBOT.id + '"]');
+    if(nav){
+      nav.classList.toggle('all-hidden', !open);
+      nav.querySelector('[data-navcount="' + BARRELBOT.id + '"]').textContent =
+        open ? filled + '/' + BARRELBOT.slots.length : '';
+    }
+
+    if(modSlot) paintModPicker();   // keep an open picker in step
+  }
+
+  /* ---------- the shelves ---------- */
+  // Everything the bought merchant upgrades have put out, by category.
+  function shelves(){
+    const by = {};
+    SHOP.cats.forEach(c => { by[c.key] = []; });
+    (BY_ID.merchant.groups || []).forEach(g => g.items.forEach(it => {
+      if(!isBuilt(it.id) || !it.stock) return;
+      it.stock.forEach(p => { if(by[p.cat]) by[p.cat].push(p); });
+    }));
+    return by;
+  }
+
+  function applyShop(){
+    const stock = shelves();
+    let total = 0;
+    SHOP.cats.forEach(c => {
+      const goods = stock[c.key];
+      total += goods.length;
+      const box = document.querySelector('[data-shelf="' + c.key + '"]');
+      box.innerHTML = goods.map(p => '<div class="good">'
+        + '<span class="good-text">'
+          + '<span class="good-name">' + escapeHtml(p.name) + '</span>'
+          + (p.desc ? '<span class="good-desc">' + escapeHtml(p.desc) + '</span>' : '')
+        + '</span>'
+        + '<span class="good-cost">' + escapeHtml(p.cost) + '</span>'
+      + '</div>').join('');
+      document.querySelector('[data-shop="' + c.key + '"]').classList.toggle('all-hidden', goods.length === 0);
+    });
+
+    const sec = document.getElementById('b-' + SHOP.id);
+    sec.classList.toggle('all-hidden', total === 0);
+    sec.querySelector('[data-count="' + SHOP.id + '"]').textContent = total;
+    const nav = document.querySelector('[data-target="' + SHOP.id + '"]');
+    if(nav){
+      nav.classList.toggle('all-hidden', total === 0);
+      nav.querySelector('[data-navcount="' + SHOP.id + '"]').textContent = total || '';
+    }
+  }
+
+  /* ---------- the tome ---------- */
+  function applyTome(){
+    const rows = document.getElementById('spell-rows');
+    if(!rows) return;
+    const keys = Object.keys(tome).sort();
+    document.getElementById('tome-count').textContent = keys.length;
+    rows.innerHTML = keys.length
+      ? keys.map(k => '<div class="folk-row">'
+          + '<span class="folk-name">' + escapeHtml((tome[k] || {}).name || '') + '</span>'
+          + '<button type="button" class="folk-drop" data-spell="' + escapeHtml(k) + '"'
+            + ' aria-label="Erase ' + escapeHtml((tome[k] || {}).name || 'this spell') + '">&times;</button>'
+        + '</div>').join('')
+      : '<p class="folk-empty">No spells have been written down yet.</p>';
   }
 
   // Contents live under one name per chain, so they carry across upgrades.
@@ -1076,14 +2134,34 @@
       if(el.value !== v) el.value = v;
     });
     document.querySelectorAll('.coin-num').forEach(el => { el.textContent = coin.toLocaleString(); });
+
+    const keys = Object.keys(bound);
+    const total = keys.reduce((sum, k) => sum + (bound[k].gold || 0), 0);
+    document.querySelectorAll('[data-bound-total]').forEach(el => {
+      el.textContent = total ? '· ' + total.toLocaleString() + 'g' : '';
+    });
+    document.querySelectorAll('[data-bound]').forEach(box => {
+      if(!keys.length){
+        box.innerHTML = '<p class="bound-empty">No coins are under an enchantment.</p>';
+        return;
+      }
+      box.innerHTML = keys.map(k => '<div class="bound-row">'
+        + '<span class="bound-amt">' + (bound[k].gold || 0).toLocaleString() + 'g</span>'
+        + '<span class="bound-words">“' + escapeHtml(bound[k].words || '') + '”</span>'
+        + '<button type="button" class="btn ghost small" data-unbind="' + escapeHtml(k) + '">Withdraw</button>'
+      + '</div>').join('');
+    });
   }
 
   // The readouts: for each entry show the best tier the guild has built.
   function applySummaries(){
-    SUMMARY.forEach(sec => {
+    let total = 0;
+    let wakeups = 0;
+
+    RESTING.groups.forEach(g => {
       let active = 0;
-      sec.entries.forEach((e, i) => {
-        const line = document.querySelector('.sline[data-sum="' + sec.id + '"][data-entry="' + i + '"]');
+      g.entries.forEach((e, i) => {
+        const line = document.querySelector('.sline[data-sum="' + g.id + '"][data-entry="' + i + '"]');
         const built = e.tiers.filter(t => isBuilt(t.id));
         const best = built.length ? built[built.length - 1] : null;
         const shown = best || e.tiers[0];   // locked entries preview their first tier
@@ -1093,8 +2171,7 @@
         if(best) active++;
       });
 
-      let wakeups = 0;
-      if(sec.id === 'wakeup'){
+      if(g.counter){
         wakeups = isBuilt('mahogany-beds') ? 2 : isBuilt('stack-of-hay') ? 1 : 0;
         document.getElementById('wakeup-num').textContent = wakeups;
         document.getElementById('wakeup-label').innerHTML = wakeups === 1
@@ -1102,22 +2179,26 @@
           : 'wakeup actions each<small>' + (wakeups ? 'after a long rest at the guild' : 'the guild has nowhere to sleep yet') + '</small>';
       }
 
-      const empty = document.querySelector('[data-empty="' + sec.id + '"]');
+      const empty = document.querySelector('[data-empty="' + g.id + '"]');
       empty.hidden = active > 0;
-      empty.textContent = sec.id === 'wakeup'
+      empty.textContent = g.counter
         ? 'Nothing to spend them on yet.'
         : 'A long rest here is worth nothing yet.';
 
-      const el = document.getElementById('b-' + sec.id);
-      const hide = active === 0 && !(sec.id === 'wakeup' && wakeups > 0);
-      el.classList.toggle('all-hidden', hide);
-      el.querySelector('[data-count="' + sec.id + '"]').textContent = active;
-      const nav = document.querySelector('[data-target="' + sec.id + '"]');
-      if(nav){
-        nav.classList.toggle('all-hidden', hide);
-        nav.querySelector('[data-navcount="' + sec.id + '"]').textContent = active;
-      }
+      const box = document.querySelector('.group[data-group="' + g.id + '"]');
+      box.classList.toggle('all-hidden', active === 0 && !(g.counter && wakeups > 0));
+      total += active;
     });
+
+    const el = document.getElementById('b-' + RESTING.id);
+    const hide = total === 0 && wakeups === 0;
+    el.classList.toggle('all-hidden', hide);
+    el.querySelector('[data-count="' + RESTING.id + '"]').textContent = total;
+    const nav = document.querySelector('[data-target="' + RESTING.id + '"]');
+    if(nav){
+      nav.classList.toggle('all-hidden', hide);
+      nav.querySelector('[data-navcount="' + RESTING.id + '"]').textContent = total;
+    }
   }
 
   /* ---------- sync plumbing ---------- */
@@ -1157,14 +2238,40 @@
       applyState();
     }, () => setSync('error'));
 
+    onValue(ref(db, 'guildhallLedger/stewards'), snapshot => {
+      stewards = snapshot.val() || {};
+      applyState();
+    }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/barrelbot'), snapshot => {
+      botkit = snapshot.val() || {};
+      applyState();
+    }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/botName'), snapshot => {
+      botName = snapshot.val() || '';
+      applyBotName();
+    }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/botTitles'), snapshot => {
+      botTitles = snapshot.val() || {};
+      applyBotName();
+    }, () => setSync('error'));
+
+    onValue(ref(db, 'guildhallLedger/tome'), snapshot => {
+      tome = snapshot.val() || {};
+      applyTome();
+    }, () => setSync('error'));
+
     onValue(ref(db, 'guildhallLedger/rack'), snapshot => {
       rack = snapshot.val() || {};
       applyPanels();
     }, () => setSync('error'));
 
     onValue(ref(db, 'guildhallLedger/chest'), snapshot => {
-      const v = snapshot.val();
-      coin = (v && typeof v.gold === 'number') ? v.gold : 0;
+      const v = snapshot.val() || {};
+      coin = typeof v.gold === 'number' ? v.gold : 0;
+      bound = v.bound || {};
       applyPanels();
     }, () => setSync('error'));
   }
@@ -1181,7 +2288,46 @@
 
   function writeSlot(n, text){
     if(!db) return;
-    set(ref(db, 'guildhallLedger/rack/s' + n), text ? text.slice(0, 60) : null)
+    set(ref(db, 'guildhallLedger/rack/s' + n), text ? text.slice(0, 50) : null)
+      .catch(() => setSync('error'));
+  }
+
+  function addSteward(name, stat, amount){
+    if(!db) return;
+    const key = 'h' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    set(ref(db, 'guildhallLedger/stewards/' + key), {
+      name: name.slice(0, 60), stat: stat, amount: amount
+    }).catch(() => setSync('error'));
+  }
+
+  function dropSteward(key){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/stewards/' + key), null).catch(() => setSync('error'));
+  }
+
+  const newKey = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  function writeBotName(name){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/botName'), name ? name.slice(0, 40) : null)
+      .catch(() => setSync('error'));
+  }
+
+  function writeTitle(key, text){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/botTitles/' + (key || newKey('t'))),
+      text ? { text: text.slice(0, 40) } : null).catch(() => setSync('error'));
+  }
+
+  function writeSpell(key, name){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/tome/' + (key || newKey('s'))),
+      name ? { name: name.slice(0, 80) } : null).catch(() => setSync('error'));
+  }
+
+  function equipModule(slotKey, moduleId){
+    if(!db) return;
+    set(ref(db, 'guildhallLedger/barrelbot/' + slotKey), moduleId || null)
       .catch(() => setSync('error'));
   }
 
@@ -1190,9 +2336,47 @@
   function moveCoin(delta){
     if(!db) return;
     runTransaction(ref(db, 'guildhallLedger/chest'), current => {
-      const have = (current && typeof current.gold === 'number') ? current.gold : 0;
-      return { gold: Math.max(0, have + delta) };
+      const c = current || {};
+      const have = typeof c.gold === 'number' ? c.gold : 0;
+      // keep every enchanted stash untouched
+      return Object.assign({}, c, { gold: Math.max(0, have + delta) });
     }).catch(() => setSync('error'));
+  }
+
+  // Coins laid aside under a stipulation, each its own stash.
+  function bindCoin(amount, words){
+    if(!db) return;
+    const key = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    runTransaction(ref(db, 'guildhallLedger/chest'), current => {
+      const c = current || {};
+      const stashes = Object.assign({}, c.bound || {});
+      stashes[key] = { gold: amount, words: words.slice(0, 120) };
+      return Object.assign({}, c, { gold: typeof c.gold === 'number' ? c.gold : 0, bound: stashes });
+    }).catch(() => setSync('error'));
+  }
+
+  function releaseCoin(key){
+    if(!db) return;
+    runTransaction(ref(db, 'guildhallLedger/chest'), current => {
+      const c = current || {};
+      const stashes = Object.assign({}, c.bound || {});
+      delete stashes[key];
+      return Object.assign({}, c, { gold: typeof c.gold === 'number' ? c.gold : 0, bound: stashes });
+    }).catch(() => setSync('error'));
+  }
+
+  // Raises everything the guild has not built yet, in one write. Rows that
+  // are already ticked are left alone, so the names on them survive.
+  function buildAll(){
+    if(!db) return;
+    const payload = {};
+    ALL_IDS.forEach(id => {
+      if(state[id]) return;
+      payload['checks/' + id] = true;
+      payload['builders/' + id] = HIGHER_HAND;
+    });
+    if(!Object.keys(payload).length) return;
+    update(ref(db, 'guildhallLedger'), payload).catch(() => setSync('error'));
   }
 
   // Only reachable from Destroy the Guild, behind DM mode and today's word.
@@ -1299,7 +2483,7 @@
     armTimer = setTimeout(() => {
       armTimer = null; armedId = null;
       toast.classList.add('spent');
-      toastText.textContent = 'The moment passed \u2014 ' + who + "'s work still stands.";
+      toastText.textContent = 'The moment passed — ' + who + "'s work still stands.";
     }, 1000);
     toastTimer = setTimeout(hideToast, 5000);
   }
@@ -1318,19 +2502,369 @@
     namer.addEventListener('click', e => { if(e.target === namer) closeNamer(false); });  // tap outside
   }
 
+  /* ---------- retiring a hero ---------- */
+  const retireDlg = document.getElementById('retire');
+  const retireName = document.getElementById('retire-name');
+  const retireAmt = document.getElementById('retire-amt');
+  const retireNote = document.getElementById('retire-note');
+
+  function chosenStat(){
+    const el = retireDlg.querySelector('input[name="retire-stat"]:checked');
+    return el ? el.value : 'STR';
+  }
+
+  function updateRetireNote(){
+    const key = chosenStat();
+    const n = parseInt(retireAmt.value, 10);
+    const have = stats[key] || 0;
+    retireNote.classList.toggle('near', !!retireAmt.value && !(n >= 1 && n <= 30));
+    retireNote.textContent = (n >= 1 && n <= 30)
+      ? 'The guild would hold ' + (have + n) + ' ' + STAT_NAME[key]
+      : 'The guild holds ' + have + ' ' + STAT_NAME[key];
+  }
+
+  function openRetire(){
+    disarm();
+    retireName.value = '';
+    retireName.placeholder = randomBuilder();
+    retireAmt.value = '';
+    const first = retireDlg.querySelector('input[name="retire-stat"][value="STR"]');
+    if(first) first.checked = true;
+    updateRetireNote();
+    if(typeof retireDlg.showModal === 'function') retireDlg.showModal();
+    else retireDlg.setAttribute('open', '');
+    setTimeout(() => retireName.focus(), 40);
+  }
+
+  function closeRetire(){
+    if(retireDlg.open) retireDlg.close(); else retireDlg.removeAttribute('open');
+  }
+
+  function setupRetire(){
+    retireAmt.addEventListener('input', () => {
+      retireAmt.value = retireAmt.value.replace(/\D/g, '').slice(0, 2);
+      updateRetireNote();
+    });
+    retireDlg.addEventListener('change', e => {
+      if(e.target.name === 'retire-stat') updateRetireNote();
+    });
+
+    document.getElementById('retire-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const name = retireName.value.trim();
+      const amount = parseInt(retireAmt.value, 10);
+      if(!name){ retireName.focus(); return; }
+      if(!(amount >= 1 && amount <= 30)){ retireAmt.focus(); retireAmt.select(); return; }
+      addSteward(name, chosenStat(), amount);
+      folkOpen = true;
+      setFolkOpen(true);
+      closeRetire();
+      flashToast(name + ' retires to the guild, leaving +' + amount + ' ' + STAT_NAME[chosenStat()] + ' behind.', 4000);
+    });
+
+    document.getElementById('retire-cancel').addEventListener('click', closeRetire);
+    retireDlg.addEventListener('cancel', e => { e.preventDefault(); closeRetire(); });
+    retireDlg.addEventListener('click', e => { if(e.target === retireDlg) closeRetire(); });
+  }
+
+  /* ---------- one dialog for every "type something in" ----------
+     The construct's name, the titles it earns, and the spells copied into
+     the Communal Tome all amount to the same thing: a line of text, saved
+     or struck out. */
+  const askDlg = document.getElementById('ask');
+  const askInput = document.getElementById('ask-input');
+  const askRemove = document.getElementById('ask-remove');
+  let askSave = null, askDrop = null;
+
+  function openAsk(opts){
+    disarm();
+    askSave = opts.onSave || null;
+    askDrop = opts.onRemove || null;
+    document.getElementById('ask-title').textContent = opts.title;
+    document.getElementById('ask-label').textContent = opts.label;
+    document.getElementById('ask-ok').textContent = opts.okLabel || 'Save';
+    askInput.value = opts.value || '';
+    askInput.placeholder = opts.placeholder || '';
+    askInput.maxLength = opts.max || 80;
+    askRemove.hidden = !opts.onRemove;
+    askRemove.textContent = opts.removeLabel || 'Remove';
+    if(typeof askDlg.showModal === 'function') askDlg.showModal();
+    else askDlg.setAttribute('open', '');
+    setTimeout(() => { askInput.focus(); askInput.select(); }, 40);
+  }
+
+  function closeAsk(){
+    askSave = null; askDrop = null;
+    if(askDlg.open) askDlg.close(); else askDlg.removeAttribute('open');
+  }
+
+  function setupAsk(){
+    document.getElementById('ask-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const v = askInput.value.trim();
+      if(!v){ askInput.focus(); return; }   // nothing to save
+      const fn = askSave;
+      closeAsk();
+      if(fn) fn(v);
+    });
+    askRemove.addEventListener('click', () => {
+      const fn = askDrop;
+      closeAsk();
+      if(fn) fn();
+    });
+    document.getElementById('ask-cancel').addEventListener('click', closeAsk);
+    askDlg.addEventListener('cancel', e => { e.preventDefault(); closeAsk(); });
+    askDlg.addEventListener('click', e => { if(e.target === askDlg) closeAsk(); });
+  }
+
+  /* ---------- the bill ----------
+     What the guild actually has to hand over. Prerequisites and stats are
+     already guaranteed by the time a row can be ticked, so the checklist
+     only carries what nobody but the party can vouch for: the gold, the
+     hands that do the work, and any relic the upgrade is paid for with. */
+  const articled = s => (/^[aeiou]/i.test(s) ? 'an ' : 'a ') + s;
+
+  function buildTasks(it){
+    const tasks = [];
+    const gold = goldOf(it);
+    if(gold > 0) tasks.push('Pay ' + gold.toLocaleString() + 'g');
+    if(it.relic) tasks.push('I have ' + articled(it.relic));
+    // "an artificer and a wizard" takes two people, so it is not an "I am"
+    if(it.by) tasks.push((/\band\b/.test(it.by) ? 'We are ' : 'I am ') + it.by);
+    if(it.note) tasks.push(it.note);
+    return tasks;
+  }
+
+  // The requirements the ledger has already checked for itself.
+  function metRequirements(it){
+    const met = (it.needs || []).map(nameOf);
+    if(it.needsAny && it.needsAny.length) met.push(it.needsAny.map(nameOf).join(' or '));
+    if(it.attr) Object.keys(it.attr).forEach(k => met.push(it.attr[k] + ' ' + (STAT_NAME[k] || k)));
+    return met;
+  }
+
+  const buildDlg = document.getElementById('buildcheck');
+  const buildOk = document.getElementById('buildcheck-ok');
+  const buildCount = document.getElementById('buildcheck-count');
+
+  function refreshBuildCheck(){
+    const boxes = Array.from(buildDlg.querySelectorAll('.task input'));
+    const done = boxes.filter(b => b.checked).length;
+    boxes.forEach(b => b.closest('.task').classList.toggle('done', b.checked));
+    buildOk.disabled = done < boxes.length;
+    buildCount.textContent = done + ' of ' + boxes.length + ' ticked';
+    buildCount.classList.toggle('near', done < boxes.length);
+  }
+
+  function openBuildCheck(id, tasks){
+    disarm();
+    pendingId = id;
+    const it = ITEM[id];
+    document.getElementById('buildcheck-title').textContent = it.name;
+    document.getElementById('buildcheck-list').innerHTML = tasks.map((t, i) =>
+      '<label class="task">'
+        + '<input type="checkbox" data-task="' + i + '" />'
+        + '<span class="box">' + CHECK_SVG + '</span>'
+        + '<span class="task-text">' + escapeHtml(t) + '</span>'
+      + '</label>').join('');
+
+    const met = metRequirements(it);
+    const note = document.getElementById('buildcheck-met');
+    note.hidden = met.length === 0;
+    note.innerHTML = '<b>Already in place:</b> ' + met.map(escapeHtml).join(' · ') + '.';
+
+    refreshBuildCheck();
+    if(typeof buildDlg.showModal === 'function') buildDlg.showModal();
+    else buildDlg.setAttribute('open', '');
+  }
+
+  // Cancelling rolls the tick back; confirming hands over to "who built this?".
+  function closeBuildCheck(advance){
+    const id = pendingId;
+    if(buildDlg.open) buildDlg.close(); else buildDlg.removeAttribute('open');
+    if(advance && id){ openNamer(id, 'check'); return; }
+    pendingId = null;
+    const cb = document.querySelector('.cb[data-id="' + id + '"]');
+    if(cb) cb.checked = !!state[id];
+  }
+
+  function setupBuildCheck(){
+    document.getElementById('buildcheck-list').addEventListener('change', refreshBuildCheck);
+    document.getElementById('buildcheck-form').addEventListener('submit', e => {
+      e.preventDefault();
+      if(buildOk.disabled) return;
+      closeBuildCheck(true);
+    });
+    document.getElementById('buildcheck-cancel').addEventListener('click', () => closeBuildCheck(false));
+    buildDlg.addEventListener('cancel', e => { e.preventDefault(); closeBuildCheck(false); });
+    buildDlg.addEventListener('click', e => { if(e.target === buildDlg) closeBuildCheck(false); });
+  }
+
+  /* ---------- letting a guildsfolk go ---------- */
+  const unretireDlg = document.getElementById('unretire');
+  let unretireKey = null;
+
+  function openUnretire(key){
+    const s = stewards[key];
+    if(!s) return;
+    disarm();
+    unretireKey = key;
+    const amount = parseInt(s.amount, 10) || 0;
+    const name = STAT_NAME[s.stat] || s.stat;
+    const after = Math.max(0, (stats[s.stat] || 0) - amount);
+    document.getElementById('unretire-text').textContent =
+      (s.name || 'This hero') + ' would leave the House of Stewardship, and the guild '
+      + 'would lose ' + amount + ' ' + name + ' · The Guild would have: ' + after + '.';
+    if(typeof unretireDlg.showModal === 'function') unretireDlg.showModal();
+    else unretireDlg.setAttribute('open', '');
+  }
+
+  function closeUnretire(){
+    unretireKey = null;
+    if(unretireDlg.open) unretireDlg.close(); else unretireDlg.removeAttribute('open');
+  }
+
+  function setupUnretire(){
+    document.getElementById('unretire-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const key = unretireKey;
+      const s = key ? stewards[key] : null;
+      const who = s && s.name ? s.name : 'A hero';
+      if(key) dropSteward(key);
+      closeUnretire();
+      flashToast(who + ' has left the House of Stewardship.', 4000);
+    });
+    document.getElementById('unretire-cancel').addEventListener('click', closeUnretire);
+    unretireDlg.addEventListener('cancel', e => { e.preventDefault(); closeUnretire(); });
+    unretireDlg.addEventListener('click', e => { if(e.target === unretireDlg) closeUnretire(); });
+  }
+
+  /* ---------- bolting a module on ---------- */
+  const modDlg = document.getElementById('modpick');
+  let modSlot = null;
+
+  function paintModPicker(){
+    if(!modSlot) return;
+    const label = SLOT_LABEL[modSlot];
+    const owned = ownedModules(modSlot);
+    const pending = pendingModules(modSlot);
+    const current = equipped(modSlot);
+
+    document.getElementById('modpick-title').textContent = 'Barrelbot · ' + label;
+    document.getElementById('modpick-sub').textContent = current
+      ? 'Currently bolted on: ' + current.name + '.'
+      : 'Nothing is bolted on yet.';
+
+    const list = document.getElementById('mod-list');
+    list.innerHTML = owned.map(it => {
+      const on = current && current.id === it.id;
+      // No price here - the Workshop was paid when the module was made.
+      // Cost only decides the order, priciest first.
+      return '<button type="button" class="mod" data-mod="' + it.id + '" aria-pressed="' + (on ? 'true' : 'false') + '">'
+        + '<span class="mod-top">'
+          + '<span class="mod-name">' + escapeHtml(it.name) + '</span>'
+          + (on ? '<span class="mod-cost">Bolted on</span>' : '')
+        + '</span>'
+        + '<span class="mod-desc">' + escapeHtml(it.desc) + '</span>'
+      + '</button>';
+    }).join('') + (current
+      ? '<button type="button" class="mod" data-mod=""><span class="mod-top">'
+        + '<span class="mod-name">Take it off</span></span>'
+        + '<span class="mod-desc">Leave this slot empty.</span></button>'
+      : '');
+
+    const empty = document.getElementById('mod-empty');
+    empty.hidden = owned.length > 0;
+    empty.textContent = 'The Workshop has not built anything for this slot yet.';
+
+    const hint = document.getElementById('mod-hint');
+    hint.hidden = pending.length === 0;
+    hint.textContent = 'Visit the Workshop for more upgrades for the Barrelbot’s '
+      + label.toLowerCase() + '!';
+  }
+
+  function openModPicker(slotKey){
+    disarm();
+    modSlot = slotKey;
+    paintModPicker();
+    if(typeof modDlg.showModal === 'function') modDlg.showModal();
+    else modDlg.setAttribute('open', '');
+  }
+
+  function closeModPicker(){
+    modSlot = null;
+    if(modDlg.open) modDlg.close(); else modDlg.removeAttribute('open');
+  }
+
+  function setupModPicker(){
+    document.getElementById('mod-list').addEventListener('click', e => {
+      const btn = e.target.closest('[data-mod]');
+      if(!btn || !modSlot) return;
+      equipModule(modSlot, btn.dataset.mod || null);
+      closeModPicker();
+    });
+    document.getElementById('modpick-close').addEventListener('click', closeModPicker);
+    document.getElementById('modpick-form').addEventListener('submit', e => { e.preventDefault(); closeModPicker(); });
+    modDlg.addEventListener('cancel', e => { e.preventDefault(); closeModPicker(); });
+    modDlg.addEventListener('click', e => { if(e.target === modDlg) closeModPicker(); });
+  }
+
+  function setFolkOpen(open){
+    folkOpen = open;
+    const folk = document.getElementById('folk');
+    folk.classList.toggle('open', open);
+    folk.querySelector('.folk-head').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
   /* ---------- the DM's door ---------- */
   const dmToggle = document.getElementById('dm-toggle');
   const dmGate = document.getElementById('dmgate');
   const dmInput = document.getElementById('dmgate-input');
   const dmLive = document.getElementById('dmgate-live');
   const destroyBtn = document.getElementById('destroy-btn');
+  const buildAllBtn = document.getElementById('buildall-btn');
+  const buildAllDlg = document.getElementById('buildall');
   let gateMode = 'unlock';
+
+  function openBuildAll(){
+    disarm();
+    const left = ALL_IDS.filter(id => !isBuilt(id)).length;
+    const standing = ALL_IDS.length - left;
+    document.getElementById('buildall-ok').disabled = left === 0;
+    document.getElementById('buildall-text').textContent = left === 0
+      ? 'The guild has already built all ' + ALL_IDS.length + ' upgrades. There is nothing left to raise.'
+      : 'This raises the ' + left + ' upgrade' + (left === 1 ? '' : 's')
+        + ' the guild has not built yet, signed by A Higher Hand.'
+        + (standing ? ' The ' + standing + ' already standing keep the names on them.' : '');
+    if(typeof buildAllDlg.showModal === 'function') buildAllDlg.showModal();
+    else buildAllDlg.setAttribute('open', '');
+  }
+
+  function closeBuildAll(){
+    if(buildAllDlg.open) buildAllDlg.close(); else buildAllDlg.removeAttribute('open');
+  }
+
+  function setupBuildAll(){
+    buildAllBtn.addEventListener('click', () => { if(dmMode) openBuildAll(); });
+    document.getElementById('buildall-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const left = ALL_IDS.filter(id => !isBuilt(id)).length;
+      if(!left){ closeBuildAll(); return; }
+      buildAll();
+      closeBuildAll();
+      flashToast('A Higher Hand raises ' + left + ' upgrade' + (left === 1 ? '' : 's') + '.', 5000);
+    });
+    document.getElementById('buildall-cancel').addEventListener('click', closeBuildAll);
+    buildAllDlg.addEventListener('cancel', e => { e.preventDefault(); closeBuildAll(); });
+    buildAllDlg.addEventListener('click', e => { if(e.target === buildAllDlg) closeBuildAll(); });
+  }
 
   function setDm(on){
     dmMode = on;
     dmToggle.checked = on;
     document.body.classList.toggle('dm', on);
     document.getElementById('dm-badge').hidden = !on;
+    buildAllBtn.hidden = !on;  // and only a higher hand raises it all at once
     destroyBtn.hidden = !on;   // the guild can only be razed from inside DM mode
     try{
       if(on) localStorage.setItem(DM_KEY, todaysCode());
@@ -1404,18 +2938,53 @@
   /* ---------- the rack and the chest ---------- */
   const coinDialog = document.getElementById('coin');
   const coinInput = document.getElementById('coin-input');
+  const coinSeg = document.getElementById('coin-seg');
+  const wordsWrap = document.getElementById('coin-words-wrap');
+  const wordsInput = document.getElementById('coin-words');
+  const boundDialog = document.getElementById('bound-dlg');
   let coinMode = 'deposit';
+  let coinKind = 'plain';
+  let boundKey = null;
 
-  function openCoin(mode){
+  function setCoinKind(kind){
+    coinKind = kind;
+    coinSeg.querySelectorAll('button').forEach(btn => {
+      btn.setAttribute('aria-pressed', btn.dataset.kind === kind ? 'true' : 'false');
+    });
+    wordsWrap.hidden = kind !== 'bind';
+    document.getElementById('coin-ok').textContent =
+      coinMode === 'withdraw' ? 'Withdraw' : (kind === 'bind' ? 'Enchant' : 'Deposit');
+  }
+
+  function openCoin(mode, enchantable){
     coinMode = mode;
     const title = mode === 'deposit' ? 'Deposit' : 'Withdraw';
     document.getElementById('coin-title').textContent = title;
-    document.getElementById('coin-ok').textContent = title;
     document.getElementById('coin-note').textContent = coin.toLocaleString() + 'g in the chest';
     coinInput.value = '';
+    wordsInput.value = '';
+    wordsInput.placeholder = randomHint();
+    coinSeg.hidden = !(mode === 'deposit' && enchantable);
+    setCoinKind('plain');
     if(typeof coinDialog.showModal === 'function') coinDialog.showModal();
     else coinDialog.setAttribute('open', '');
     setTimeout(() => coinInput.focus(), 40);
+  }
+
+  function openBound(key){
+    const stash = bound[key];
+    if(!stash) return;
+    boundKey = key;
+    document.getElementById('bound-text').textContent =
+      'Do you want to withdraw ' + (stash.gold || 0).toLocaleString() + ' coins? '
+      + 'It’s enchanted with the following words: “' + (stash.words || '') + '”';
+    if(typeof boundDialog.showModal === 'function') boundDialog.showModal();
+    else boundDialog.setAttribute('open', '');
+  }
+
+  function closeBound(){
+    boundKey = null;
+    if(boundDialog.open) boundDialog.close(); else boundDialog.removeAttribute('open');
   }
 
   function closeCoin(){
@@ -1441,12 +3010,33 @@
     coinInput.addEventListener('input', () => {
       coinInput.value = coinInput.value.replace(/\D/g, '').slice(0, 9);
     });
+    coinSeg.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-kind]');
+      if(btn) setCoinKind(btn.dataset.kind);
+      if(btn && btn.dataset.kind === 'bind') setTimeout(() => wordsInput.focus(), 20);
+    });
     document.getElementById('coin-form').addEventListener('submit', e => {
       e.preventDefault();
       const amount = parseInt(coinInput.value, 10);
-      if(amount > 0) moveCoin(coinMode === 'deposit' ? amount : -amount);
+      if(!(amount > 0)){ coinInput.focus(); return; }
+      if(coinMode === 'deposit' && coinKind === 'bind'){
+        const words = wordsInput.value.trim();
+        if(!words){ wordsInput.focus(); return; }   // an enchantment needs its words
+        bindCoin(amount, words);
+      } else {
+        moveCoin(coinMode === 'deposit' ? amount : -amount);
+      }
       closeCoin();
     });
+
+    document.getElementById('bound-form').addEventListener('submit', e => {
+      e.preventDefault();
+      if(boundKey) releaseCoin(boundKey);
+      closeBound();
+    });
+    document.getElementById('bound-cancel').addEventListener('click', closeBound);
+    boundDialog.addEventListener('cancel', e => { e.preventDefault(); closeBound(); });
+    boundDialog.addEventListener('click', e => { if(e.target === boundDialog) closeBound(); });
     document.getElementById('coin-cancel').addEventListener('click', closeCoin);
     coinDialog.addEventListener('cancel', e => { e.preventDefault(); closeCoin(); });
     coinDialog.addEventListener('click', e => { if(e.target === coinDialog) closeCoin(); });
@@ -1454,8 +3044,66 @@
 
   function setupInteractions(){
     document.getElementById('ledger').addEventListener('click', e => {
+      if(e.target.closest('#retire-btn')){ openRetire(); return; }
+      const drop = e.target.closest('[data-drop]');
+      if(drop){ openUnretire(drop.dataset.drop); return; }
+      // every collapsible sub-list opens the same way
+      const subHead = e.target.closest('.folk-head');
+      if(subHead){
+        const box = subHead.closest('.folk');
+        const open = !box.classList.contains('open');
+        box.classList.toggle('open', open);
+        subHead.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if(box.id === 'folk') folkOpen = open;
+        return;
+      }
+      const slot = e.target.closest('.bot-slot');
+      if(slot){ openModPicker(slot.dataset.slot); return; }
+
+      if(e.target.closest('#bot-name')){
+        openAsk({ title:'The construct', label:'What does the guild call it?',
+          value:botCalled(), placeholder:BOT_DEFAULT_NAME, max:40,
+          onSave:v => writeBotName(v) });
+        return;
+      }
+      if(e.target.closest('#bot-add-title')){
+        openAsk({ title:'Add a title', label:'What has it earned?',
+          value:'', placeholder:'the deep', max:40, okLabel:'Add',
+          onSave:v => writeTitle(null, v) });
+        return;
+      }
+      const title = e.target.closest('.bot-title');
+      if(title){
+        const k = title.dataset.title;
+        openAsk({ title:'Title', label:'What has it earned?',
+          value:(botTitles[k] || {}).text || '', max:40,
+          onSave:v => writeTitle(k, v), onRemove:() => writeTitle(k, null) });
+        return;
+      }
+
+      if(e.target.closest('#write-spell')){
+        openAsk({ title:'Write a spell', label:'Which spell goes into the tome?',
+          value:'', placeholder:'Fireball', max:80, okLabel:'Write it',
+          onSave:v => writeSpell(null, v) });
+        return;
+      }
+      const spell = e.target.closest('[data-spell]');
+      if(spell){
+        const k = spell.dataset.spell;
+        openAsk({ title:'A written spell', label:'Which spell is this?',
+          value:(tome[k] || {}).name || '', max:80,
+          onSave:v => writeSpell(k, v), onRemove:() => writeSpell(k, null),
+          removeLabel:'Erase it' });
+        return;
+      }
+      const unbind = e.target.closest('[data-unbind]');
+      if(unbind){ openBound(unbind.dataset.unbind); return; }
       const coinBtn = e.target.closest('[data-coin]');
-      if(coinBtn){ openCoin(coinBtn.dataset.coin); return; }
+      if(coinBtn){
+        const panel = coinBtn.closest('.panel');
+        openCoin(coinBtn.dataset.coin, !!(panel && panel.dataset.enchanted));
+        return;
+      }
       const credit = e.target.closest('.credit');
       if(credit){ openNamer(credit.dataset.edit, 'edit'); return; }
       const head = e.target.closest('.building-head');
@@ -1468,11 +3116,27 @@
       const cb = e.target;
       if(!cb.classList || !cb.classList.contains('cb')) return;
       const id = cb.dataset.id;
-      // Ticking asks who built it first; the write happens when that is answered.
-      // In DM mode it just happens, signed by a higher hand.
+      const it = ITEM[id];
+
+      // An attribute short of its minimum is a wall on the way in, not a
+      // curtain: the row was always visible, the tick just does not land.
+      if(cb.checked && !dmMode && it && !attrMet(it) && !isBuilt(id)){
+        cb.checked = false;
+        const short = Object.keys(it.attr)
+          .filter(k => (stats[k] || 0) < it.attr[k])
+          .map(k => attrPhrase(k, it.attr[k], stats[k] || 0));
+        flashToast(it.name + ' — ' + short.join(' — '), 5000);
+        return;
+      }
+
+      // Ticking runs the bill past the party, then asks who built it; the
+      // write happens once both are answered. In DM mode it just happens,
+      // signed by a higher hand.
       if(cb.checked){
-        if(dmMode){ disarm(); writeItem(id, true, HIGHER_HAND); }
-        else openNamer(id, 'check');
+        if(dmMode){ disarm(); writeItem(id, true, HIGHER_HAND); return; }
+        const tasks = it ? buildTasks(it) : [];
+        if(tasks.length) openBuildCheck(id, tasks);
+        else openNamer(id, 'check');   // nothing to hand over, so nothing to tick
         return;
       }
       // The DM tears things down with one click; nobody's hard work is safe.
@@ -1499,6 +3163,13 @@
 
     document.getElementById('reveal-toggle').addEventListener('change', e => {
       document.body.classList.toggle('reveal', e.target.checked);
+      markFirstVisible();   // a revealed wing may now be the topmost one
+    });
+
+    document.getElementById('lean-toggle').addEventListener('change', e => {
+      leanMode = e.target.checked;
+      document.body.classList.toggle('lean', leanMode);
+      applyState();   // whole wings may empty out, or fill back up
     });
 
     document.getElementById('collapse-btn').addEventListener('click', () => {
@@ -1531,10 +3202,17 @@
   function init(){
     buildStaticDOM();
     setupNamer();
+    setupAsk();
+    setupBuildCheck();
+    setupBuildAll();
+    setupRetire();
+    setupUnretire();
+    setupModPicker();
     setupVault();
     setupDmGate();
     setupInteractions();
     setupNavHighlight();
+    setFolkOpen(false);
     syncCollapseBtn();
     applyState();
 
@@ -1550,12 +3228,17 @@
 
   // exposed so the gating rules can be checked without a database
   window.__ledger = {
-    DATA, ITEM, needsMet, supersededBy,
+    DATA, ITEM, STEWARD, BARRELBOT, SECTIONS, needsMet, attrMet, supersededBy,
+    ownedModules, pendingModules, equipped,
     get state(){ return state; }, set state(v){ state = v; applyState(); },
     get builders(){ return builders; }, set builders(v){ builders = v; applyState(); },
+    get stewards(){ return stewards; }, set stewards(v){ stewards = v; applyState(); },
+    get botkit(){ return botkit; }, set botkit(v){ botkit = v; applyState(); },
+    get stats(){ return stats; },
     get dmMode(){ return dmMode; }, todaysCode,
     get rack(){ return rack; }, set rack(v){ rack = v; applyPanels(); },
-    get coin(){ return coin; }, set coin(v){ coin = v; applyPanels(); }
+    get coin(){ return coin; }, set coin(v){ coin = v; applyPanels(); },
+    get bound(){ return bound; }, set bound(v){ bound = v; applyPanels(); }
   };
 </script>
 </body>
