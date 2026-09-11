@@ -211,7 +211,12 @@
   .building-body{ display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease; }
   .building.collapsed .building-body{ grid-template-rows:0fr; }
   .building-inner{
-    overflow:hidden;
+    /* `position:relative` matters as much as the clip here. The row
+       checkboxes are absolutely positioned, and an absolute box is only
+       clipped by an ancestor that is also its containing block - with
+       everything static they were measured against the document instead,
+       so a collapsed wing still stretched the page by its full height. */
+    position:relative; overflow:hidden;
     /* This box has to clip for the collapse animation, so it reaches 10px
        wider than the rows and pads the content back into place - otherwise
        the focus ring around a stamp gets shaved off at the left edge. */
@@ -435,7 +440,7 @@
   .folk.open .folk-head .chev{ transform:rotate(0deg); }
   .folk-body{ display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
   .folk.open .folk-body{ grid-template-rows:1fr; }
-  .folk-inner{ overflow:hidden; }
+  .folk-inner{ position:relative; overflow:hidden; }
   .folk-pad{ padding-bottom:10px; }
 
   .folk-row{

@@ -50,7 +50,6 @@
     padding:34px 0 22px;
   }
   .sidebar h1{ font-size:1.45rem; line-height:1.2; }
-  .sidebar .tagline{ margin:8px 0 0; font-size:0.83rem; color:var(--text-on-ink-muted); max-width:30ch; }
 
   /* wide screen: the sidebar's own list. narrow: a sticky bar with the
      list folded away behind it, both pinned together in one box. */
@@ -120,7 +119,7 @@
 
   .rule-body{ display:grid; grid-template-rows:1fr; transition:grid-template-rows .3s ease; }
   .rule.collapsed .rule-body{ grid-template-rows:0fr; }
-  .rule-inner{ overflow:hidden; margin:0 -10px; padding:0 10px; }
+  .rule-inner{ position:relative; overflow:hidden; margin:0 -10px; padding:0 10px; }
   .rule-inner > .pad{ padding-bottom:18px; }
 
   .rule p{ margin:0 0 10px; font-size:0.96rem; max-width:66ch; }
@@ -193,7 +192,6 @@
     .app{ flex-direction:column; align-items:stretch; gap:0; padding:var(--bar-h) 14px 78px; }
     .sidebar{ display:contents; }
     .sidebar h1{ order:1; font-size:1.3rem; padding-top:18px; }
-    .sidebar .tagline{ display:none; }
     /* Fixed, not sticky: a sticky bar is positioned against the layout
        viewport, so a phone's collapsing address bar can leave it hanging
        half off the top of the screen. Fixed is measured from the viewport
@@ -276,7 +274,6 @@
   <div class="app">
     <aside class="sidebar">
       <h1>Altered Rules</h1>
-      <p class="tagline">Where this table parts ways with the book.</p>
 
       <div class="rail">
         <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav">
