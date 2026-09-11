@@ -633,6 +633,15 @@
     margin:0; padding:0; border:none; background:transparent; overflow:hidden;
   }
   dialog.namer::backdrop{ background:rgba(18,12,6,0.7); }
+
+  /* ---------- the door ----------
+     The page starts locked and stays that way until today's code is given.
+     The class is on <body> from the markup, so nothing flashes on screen
+     before the script has had a chance to run. */
+  body.locked .app{ display:none; }
+  dialog.gate::backdrop{ background:var(--ink); }
+  .gate .sheet h3{ font-size:1.5rem; }
+  .gate .prompt{ font-size:0.95rem; }
   .sheet{
     width:min(430px, calc(100vw - 28px));
     margin:clamp(20px, 9vh, 110px) auto 0;
@@ -819,7 +828,22 @@
   }
 </style>
 </head>
-<body>
+<body class="locked">
+  <dialog class="namer gate" id="gate" aria-labelledby="gate-title">
+    <form class="sheet" id="gate-form" method="dialog">
+      <h3 id="gate-title">You shall not pass!</h3>
+      <p class="prompt">The Guild is not open for visitors quite yet.</p>
+      <input id="gate-input" class="code" type="text" inputmode="numeric" autocomplete="off"
+             maxlength="4" pattern="[0-9]*" enterkeyhint="go" aria-label="Today&rsquo;s code" />
+      <span class="sr-only" id="gate-live" role="status" aria-live="polite"></span>
+      <div class="namer-foot">
+        <span class="namer-actions">
+          <button type="submit" class="btn primary">Enter</button>
+        </span>
+      </div>
+    </form>
+  </dialog>
+
   <div class="app">
     <aside class="sidebar">
       <h1>The Guildhall Ledger</h1>
@@ -3204,6 +3228,55 @@
     folk.querySelector('.folk-head').setAttribute('aria-expanded', open ? 'true' : 'false');
   }
 
+  /* ---------- the front door ----------
+     A doorman, not a lock: the ledger is a single file, so anyone who reads
+     it can find their way past. It keeps a passer-by out, and nothing is
+     fetched from the database until the code is given. */
+  const GATE_KEY = 'guildhall-gate';
+  const gateDlg = document.getElementById('gate');
+  const gateInput = document.getElementById('gate-input');
+
+  function letIn(){
+    document.body.classList.remove('locked');
+    if(gateDlg.open) gateDlg.close(); else gateDlg.removeAttribute('open');
+    try{ localStorage.setItem(GATE_KEY, todaysCode()); }catch(e){ /* private windows */ }
+    if(NEEDS_SETUP){ setSync('setup'); showSetupBanner(); return; }
+    if(!db) initFirebase();   // only now does the guild's ledger come down
+  }
+
+  function knockOnDoor(){
+    if(typeof gateDlg.showModal === 'function') gateDlg.showModal();
+    else gateDlg.setAttribute('open', '');
+    setTimeout(() => gateInput.focus(), 40);
+  }
+
+  function setupGate(){
+    gateInput.addEventListener('input', () => {
+      gateInput.value = gateInput.value.replace(/\D/g, '').slice(0, 4);
+      document.getElementById('gate-live').textContent = '';
+    });
+
+    document.getElementById('gate-form').addEventListener('submit', e => {
+      e.preventDefault();
+      if(gateInput.value === todaysCode()){ letIn(); return; }
+      document.getElementById('gate-live').textContent = 'The doors stay shut.';
+      const sheet = gateDlg.querySelector('.sheet');
+      sheet.classList.remove('shake');
+      void sheet.offsetWidth;
+      sheet.classList.add('shake');
+      gateInput.select();
+    });
+
+    // there is no way around this one: no cancel, no escape, no tapping away
+    gateDlg.addEventListener('cancel', e => e.preventDefault());
+
+    // remembered for today only - the word turns over at midnight
+    let remembered = null;
+    try{ remembered = localStorage.getItem(GATE_KEY); }catch(e){}
+    if(remembered === todaysCode()) letIn();
+    else knockOnDoor();
+  }
+
   /* ---------- the DM's door ---------- */
   const dmToggle = document.getElementById('dm-toggle');
   const dmGate = document.getElementById('dmgate');
@@ -3606,12 +3679,9 @@
     syncCollapseBtn();
     applyState();
 
-    if(NEEDS_SETUP){
-      setSync('setup');
-      showSetupBanner();
-      return;
-    }
-    initFirebase();
+    // The door decides what happens next: an answered code calls letIn(),
+    // which is what actually reaches for the database.
+    setupGate();
   }
 
   init();
