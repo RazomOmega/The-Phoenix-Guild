@@ -21,6 +21,7 @@
     --text-on-ink:#e9dfc4;
     --text-on-ink-muted:#b6a985;
     --radius:6px;
+    --bar-h:48px;
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -761,20 +762,25 @@
   @media (max-width:900px){
     /* stretch, not flex-start: as a column the base rule would size every
        child to its own content and push the page wider than the screen */
-    .app{ flex-direction:column; align-items:stretch; gap:0; padding:0 14px 48px; }
+    .app{ flex-direction:column; align-items:stretch; gap:0; padding:var(--bar-h) 14px 48px; }
     /* the sidebar's children join the page flow so only the nav rail stays sticky */
     .sidebar{ display:contents; }
     .sidebar h1{ order:1; font-size:1.3rem; padding-top:18px; }
     .sidebar .tagline{ display:none; }
     .sync{ order:2; margin-top:7px; }
     /* the wings fold away behind a hamburger, pinned to the top of the screen */
+    /* Fixed, not sticky: a sticky bar is positioned against the layout
+       viewport, so a phone's collapsing address bar can leave it hanging
+       half off the top of the screen. Fixed is measured from the viewport
+       itself and stays whole. .app reserves its height so nothing hides
+       underneath. */
     .rail{
-      order:3; position:sticky; top:0; z-index:30;
-      flex:none; min-height:0; margin:10px -14px 0;
+      order:3; position:fixed; top:0; left:0; right:0; z-index:30;
+      flex:none; min-height:0; margin:0;
     }
     .menu-btn{
       display:flex; align-items:center; gap:11px; width:100%;
-      padding:12px 14px; background:var(--ink); border:none;
+      height:var(--bar-h); padding:0 14px; background:var(--ink); border:none;
       border-bottom:1px solid rgba(233,223,196,0.18);
       box-shadow:0 6px 12px -8px rgba(0,0,0,0.9);
       color:var(--text-on-ink); font:inherit; font-size:0.9rem;
@@ -786,7 +792,7 @@
     }
     .side-scroll{
       display:none; order:4; margin:0; padding:6px 0 8px;
-      max-height:min(68vh, 460px); overflow-y:auto;
+      max-height:calc(100dvh - var(--bar-h) - 12px); overflow-y:auto;
       background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.18);
       box-shadow:0 14px 26px -10px rgba(0,0,0,0.95);
     }
@@ -805,9 +811,14 @@
       display:block; position:fixed; inset:0; z-index:20;
       background:rgba(18,12,6,0.55);
     }
+    /* With the menu down the page underneath is pinned where it was, so a
+       swipe moves the list and not the ledger behind it. The script stores
+       the scroll position in `top` and puts it back on close. */
+    body.menu-open{ position:fixed; left:0; right:0; width:100%; overflow:hidden; }
+    body.menu-open #collapse-btn{ display:none; }
     /* jumping to a section must clear the rail */
     /* clear the sticky bar, with a little air under it */
-    section.building{ scroll-margin-top:58px; }
+    section.building{ scroll-margin-top:calc(var(--bar-h) + 10px); }
     main{ order:4; padding-top:14px; }
     .side-stats{ order:5; margin-top:20px; }
     .side-foot{
@@ -859,7 +870,7 @@
   }
 
   @media (max-width:380px){
-    .app{ padding:0 10px 40px; }
+    .app{ padding:var(--bar-h) 10px 40px; }
     .side-scroll{ margin:10px -10px 0; padding:0 10px; }
     .ledger{ padding:2px 12px 8px; }
     .building-head h2{ font-size:1.25rem; }
@@ -3695,9 +3706,24 @@
      always on show in the sidebar and none of this does anything. */
   const menuBtn = document.getElementById('menu-btn');
 
+  // Where the page was standing when the menu came down. The body is pinned
+  // at that offset while the menu is open, so a swipe over the list moves the
+  // list alone; closing puts the page back exactly where it was.
+  let heldAt = null;
+
   function setMenu(open){
+    if(open && heldAt === null){
+      heldAt = window.scrollY;
+      document.body.style.top = (-heldAt) + 'px';
+    }
     document.body.classList.toggle('menu-open', open);
     menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if(!open && heldAt !== null){
+      const back = heldAt;
+      heldAt = null;
+      document.body.style.top = '';
+      window.scrollTo(0, back);
+    }
   }
   const closeMenu = () => setMenu(false);
 
