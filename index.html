@@ -59,9 +59,27 @@
   .sync-dot{ width:7px; height:7px; border-radius:50%; background:var(--verdigris); flex-shrink:0; }
   .sync.error .sync-dot{ background:#a15c3f; }
 
+  /* On a wide screen the rail is simply the sidebar's scrolling list. On a
+     phone it becomes a sticky bar with the list folded away behind it, so
+     both pieces live in one box that can be pinned together. */
+  .rail{ flex:1; min-height:0; display:flex; flex-direction:column; }
   .side-scroll{ flex:1; overflow-y:auto; margin-top:20px; padding-right:4px; }
   .side-scroll::-webkit-scrollbar{ width:6px; }
   .side-scroll::-webkit-scrollbar-thumb{ background:rgba(233,223,196,0.15); border-radius:3px; }
+
+  .menu-btn{ display:none; }
+  .scrim{ display:none; }
+  .bars{ position:relative; width:18px; height:12px; flex-shrink:0; }
+  .bars span{
+    position:absolute; left:0; width:100%; height:2px; border-radius:2px;
+    background:currentColor; transition:transform .25s ease, opacity .15s ease;
+  }
+  .bars span:nth-child(1){ top:0; }
+  .bars span:nth-child(2){ top:5px; }
+  .bars span:nth-child(3){ top:10px; }
+  body.menu-open .bars span:nth-child(1){ transform:translateY(5px) rotate(45deg); }
+  body.menu-open .bars span:nth-child(2){ opacity:0; }
+  body.menu-open .bars span:nth-child(3){ transform:translateY(-5px) rotate(-45deg); }
 
   nav.side{ display:flex; flex-direction:column; gap:1px; }
   .nav-item{
@@ -749,26 +767,47 @@
     .sidebar h1{ order:1; font-size:1.3rem; padding-top:18px; }
     .sidebar .tagline{ display:none; }
     .sync{ order:2; margin-top:7px; }
-    /* a thin rail, pinned to the top of the screen, scrolled sideways */
-    .side-scroll{
-      order:3; position:sticky; top:0; z-index:20;
-      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.18);
+    /* the wings fold away behind a hamburger, pinned to the top of the screen */
+    .rail{
+      order:3; position:sticky; top:0; z-index:30;
+      flex:none; min-height:0; margin:10px -14px 0;
+    }
+    .menu-btn{
+      display:flex; align-items:center; gap:11px; width:100%;
+      padding:12px 14px; background:var(--ink); border:none;
+      border-bottom:1px solid rgba(233,223,196,0.18);
       box-shadow:0 6px 12px -8px rgba(0,0,0,0.9);
-      margin:10px -14px 0; padding:0 14px;
-      overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
-      scrollbar-width:none;
+      color:var(--text-on-ink); font:inherit; font-size:0.9rem;
+      text-align:left; cursor:pointer;
     }
-    .side-scroll::-webkit-scrollbar{ display:none; }
-    nav.side{ flex-direction:row; gap:2px; }
+    .menu-label{
+      flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      color:var(--brass);
+    }
+    .side-scroll{
+      display:none; order:4; margin:0; padding:6px 0 8px;
+      max-height:min(68vh, 460px); overflow-y:auto;
+      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.18);
+      box-shadow:0 14px 26px -10px rgba(0,0,0,0.95);
+    }
+    body.menu-open .side-scroll{ display:block; }
+    nav.side{ flex-direction:column; gap:0; }
     .nav-item{
-      width:auto; flex:0 0 auto; gap:6px; font-size:0.82rem; padding:6px 9px;
-      border-left:none; border-bottom:2px solid transparent;
-      border-radius:4px 4px 0 0; white-space:nowrap;
+      width:100%; font-size:0.95rem; padding:12px 14px; min-height:46px;
+      border-left:3px solid transparent; border-radius:0;
     }
-    .nav-count{ font-size:0.7rem; }
-    .nav-item.active{ border-left-color:transparent; border-bottom-color:var(--brass); }
+    .nav-item + .nav-item{ border-top:1px solid rgba(233,223,196,0.08); }
+    .nav-count{ font-size:0.8rem; }
+    .nav-item.active{ border-left-color:var(--brass); }
+
+    /* tapping anywhere else puts the menu away */
+    body.menu-open .scrim{
+      display:block; position:fixed; inset:0; z-index:20;
+      background:rgba(18,12,6,0.55);
+    }
     /* jumping to a section must clear the rail */
-    section.building{ scroll-margin-top:46px; }
+    /* clear the sticky bar, with a little air under it */
+    section.building{ scroll-margin-top:58px; }
     main{ order:4; padding-top:14px; }
     .side-stats{ order:5; margin-top:20px; }
     .side-foot{
@@ -850,8 +889,14 @@
       <p class="tagline">A shared record of what the guild has built.</p>
       <span class="sync" id="sync-status"><span class="sync-dot"></span><span class="sync-text">Connecting&hellip;</span></span>
 
-      <div class="side-scroll">
-        <nav class="side" id="nav"></nav>
+      <div class="rail">
+        <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav">
+          <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="menu-label" id="menu-label">The Phoenix Guild</span>
+        </button>
+        <div class="side-scroll">
+          <nav class="side" id="nav"></nav>
+        </div>
       </div>
 
       <div class="side-stats" id="side-stats" hidden>
@@ -901,6 +946,8 @@
       </a>
     </main>
   </div>
+
+  <div class="scrim" id="scrim"></div>
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <span class="toast-text"></span>
@@ -3620,6 +3667,7 @@
       const id = btn.dataset.target;
       setOpen(id, true);
       syncCollapseBtn();
+      closeMenu();   // a chosen wing puts the menu away with it
       document.getElementById('b-' + id).scrollIntoView({ behavior:'smooth', block:'start' });
     });
 
@@ -3642,6 +3690,26 @@
 
   }
 
+  /* ---------- the hamburger ----------
+     Only ever visible on a narrow screen; on a wide one the wings are
+     always on show in the sidebar and none of this does anything. */
+  const menuBtn = document.getElementById('menu-btn');
+
+  function setMenu(open){
+    document.body.classList.toggle('menu-open', open);
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  const closeMenu = () => setMenu(false);
+
+  function setupMenu(){
+    menuBtn.addEventListener('click', () =>
+      setMenu(!document.body.classList.contains('menu-open')));
+    document.getElementById('scrim').addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenu(); });
+    // going back to a wide screen leaves nothing half-open behind
+    window.addEventListener('resize', () => { if(window.innerWidth > 900) closeMenu(); });
+  }
+
   function syncCollapseBtn(){
     const anyOpen = SECTIONS.some(b => openState[b.id]);
     document.getElementById('collapse-btn').textContent = anyOpen ? 'Collapse all' : 'Expand all';
@@ -3655,6 +3723,9 @@
         if(entry.isIntersecting){
           const id = entry.target.id.replace('b-', '');
           buttons.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+          // the closed bar still says where you are
+          const here = SECTIONS.filter(s => s.id === id)[0];
+          if(here) document.getElementById('menu-label').textContent = here.title;
         }
       });
     }, { rootMargin:'-15% 0px -70% 0px' });
@@ -3674,6 +3745,7 @@
     setupVault();
     setupDmGate();
     setupInteractions();
+    setupMenu();
     setupNavHighlight();
     setFolkOpen(false);
     syncCollapseBtn();

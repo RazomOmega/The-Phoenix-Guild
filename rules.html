@@ -51,9 +51,26 @@
   .sidebar h1{ font-size:1.45rem; line-height:1.2; }
   .sidebar .tagline{ margin:8px 0 0; font-size:0.83rem; color:var(--text-on-ink-muted); max-width:30ch; }
 
+  /* wide screen: the sidebar's own list. narrow: a sticky bar with the
+     list folded away behind it, both pinned together in one box. */
+  .rail{ flex:1; min-height:0; display:flex; flex-direction:column; }
   .side-scroll{ flex:1; overflow-y:auto; margin-top:20px; padding-right:4px; }
   .side-scroll::-webkit-scrollbar{ width:6px; }
   .side-scroll::-webkit-scrollbar-thumb{ background:rgba(233,223,196,0.15); border-radius:3px; }
+
+  .menu-btn{ display:none; }
+  .scrim{ display:none; }
+  .bars{ position:relative; width:18px; height:12px; flex-shrink:0; }
+  .bars span{
+    position:absolute; left:0; width:100%; height:2px; border-radius:2px;
+    background:currentColor; transition:transform .25s ease, opacity .15s ease;
+  }
+  .bars span:nth-child(1){ top:0; }
+  .bars span:nth-child(2){ top:5px; }
+  .bars span:nth-child(3){ top:10px; }
+  body.menu-open .bars span:nth-child(1){ transform:translateY(5px) rotate(45deg); }
+  body.menu-open .bars span:nth-child(2){ opacity:0; }
+  body.menu-open .bars span:nth-child(3){ transform:translateY(-5px) rotate(-45deg); }
 
   nav.side{ display:flex; flex-direction:column; gap:1px; }
   .nav-item{
@@ -176,23 +193,43 @@
     .sidebar{ display:contents; }
     .sidebar h1{ order:1; font-size:1.3rem; padding-top:18px; }
     .sidebar .tagline{ display:none; }
-    .side-scroll{
-      order:3; position:sticky; top:0; z-index:20;
-      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.18);
+    .rail{
+      order:3; position:sticky; top:0; z-index:30;
+      flex:none; min-height:0; margin:10px -14px 0;
+    }
+    .menu-btn{
+      display:flex; align-items:center; gap:11px; width:100%;
+      padding:12px 14px; background:var(--ink); border:none;
+      border-bottom:1px solid rgba(233,223,196,0.18);
       box-shadow:0 6px 12px -8px rgba(0,0,0,0.9);
-      margin:10px -14px 0; padding:0 14px;
-      overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
-      scrollbar-width:none;
+      color:var(--text-on-ink); font:inherit; font-size:0.9rem;
+      text-align:left; cursor:pointer;
     }
-    .side-scroll::-webkit-scrollbar{ display:none; }
-    nav.side{ flex-direction:row; gap:2px; }
+    .menu-label{
+      flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      color:var(--brass);
+    }
+    .side-scroll{
+      display:none; order:4; margin:0; padding:6px 0 8px;
+      max-height:min(68vh, 460px); overflow-y:auto;
+      background:var(--ink); border-bottom:1px solid rgba(233,223,196,0.18);
+      box-shadow:0 14px 26px -10px rgba(0,0,0,0.95);
+    }
+    body.menu-open .side-scroll{ display:block; }
+    nav.side{ flex-direction:column; gap:0; }
     .nav-item{
-      width:auto; flex:0 0 auto; font-size:0.82rem; padding:6px 9px;
-      border-left:none; border-bottom:2px solid transparent;
-      border-radius:4px 4px 0 0; white-space:nowrap;
+      width:100%; font-size:0.95rem; padding:12px 14px; min-height:46px;
+      border-left:3px solid transparent; border-radius:0;
     }
-    .nav-item.active{ border-left-color:transparent; border-bottom-color:var(--brass); }
-    section.rule{ scroll-margin-top:46px; }
+    .nav-item + .nav-item{ border-top:1px solid rgba(233,223,196,0.08); }
+    .nav-item.active{ border-left-color:var(--brass); }
+
+    body.menu-open .scrim{
+      display:block; position:fixed; inset:0; z-index:20;
+      background:rgba(18,12,6,0.55);
+    }
+    /* clear the sticky bar, with a little air under it */
+    section.rule{ scroll-margin-top:58px; }
     main{ order:4; padding-top:14px; }
     .side-foot{ order:5; margin-top:20px; padding-top:14px; }
     .ledger{ padding:2px 14px 8px; }
@@ -223,13 +260,21 @@
 </style>
 </head>
 <body>
+  <div class="scrim" id="scrim"></div>
+
   <div class="app">
     <aside class="sidebar">
       <h1>Altered Rules</h1>
       <p class="tagline">Where this table parts ways with the book.</p>
 
-      <div class="side-scroll">
-        <nav class="side" id="nav"></nav>
+      <div class="rail">
+        <button class="menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="nav">
+          <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="menu-label" id="menu-label">Inspiration</span>
+        </button>
+        <div class="side-scroll">
+          <nav class="side" id="nav"></nav>
+        </div>
       </div>
 
       <div class="side-foot">
@@ -360,6 +405,23 @@
     document.getElementById('collapse-btn').textContent = anyOpen ? 'Collapse all' : 'Expand all';
   }
 
+  /* ---------- the hamburger, for narrow screens only ---------- */
+  const menuBtn = document.getElementById('menu-btn');
+
+  function setMenu(open){
+    document.body.classList.toggle('menu-open', open);
+    menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  const closeMenu = () => setMenu(false);
+
+  function setupMenu(){
+    menuBtn.addEventListener('click', () =>
+      setMenu(!document.body.classList.contains('menu-open')));
+    document.getElementById('scrim').addEventListener('click', closeMenu);
+    document.addEventListener('keydown', e => { if(e.key === 'Escape') closeMenu(); });
+    window.addEventListener('resize', () => { if(window.innerWidth > 900) closeMenu(); });
+  }
+
   function setup(){
     document.getElementById('rules').addEventListener('click', e => {
       const more = e.target.closest('#xp-more');
@@ -382,6 +444,7 @@
       if(!btn) return;
       setOpen(btn.dataset.target, true);
       syncCollapseBtn();
+      closeMenu();
       document.getElementById('r-' + btn.dataset.target).scrollIntoView({ behavior:'smooth', block:'start' });
     });
 
@@ -397,6 +460,8 @@
         if(entry.isIntersecting){
           const id = entry.target.id.replace('r-', '');
           buttons.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+          const here = RULES.filter(r => r.id === id)[0];
+          if(here) document.getElementById('menu-label').textContent = here.title;
         }
       });
     }, { rootMargin:'-15% 0px -70% 0px' });
@@ -405,6 +470,7 @@
 
   build();
   setup();
+  setupMenu();
   syncCollapseBtn();
 </script>
 </body>
