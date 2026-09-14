@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Exact odds of hitting each target number with 3d6 plus a bonus from -5 to +10.">
+<style>
+  :root{color-scheme:light dark}
+  html,body{margin:0}
+  img{max-width:100%}
+  [hidden]{display:none !important}
+</style>
+<title>3d6 Target Number Odds</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap">
+<style>
+  :root{
+    --bg:#F2F5F4;
+    --surface:#FFFFFF;
+    --surface-2:#E9EEEC;
+    --ink:#16211F;
+    --ink-2:#425250;
+    --muted:#7A8B88;
+    --line:#D9E1DE;
+    --accent:#A3701A;
+    --accent-soft:#F0E2C6;
+
+    --p0:#EBEEED; --t0:#8A9A97;
+    --p1:#DCEBE7; --t1:#1D3B36;
+    --p2:#C3E1D9; --t2:#16352F;
+    --p3:#A2D2C7; --t3:#0F2E29;
+    --p4:#79BFB1; --t4:#0B2A25;
+    --p5:#57AE9E; --t5:#08241F;
+    --p6:#26806F; --t6:#FFFFFF;
+    --p7:#17685A; --t7:#FFFFFF;
+    --p8:#0B4E43; --t8:#FFFFFF;
+
+    --bar:#26806F;
+    --shadow:0 1px 2px rgba(16,38,34,.06), 0 8px 24px -12px rgba(16,38,34,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#101617;
+      --surface:#161E1F;
+      --surface-2:#1C2526;
+      --ink:#E8EFED;
+      --ink-2:#AFC1BD;
+      --muted:#7C908C;
+      --line:#283334;
+      --accent:#D9A54A;
+      --accent-soft:#3A2F16;
+
+      --p0:#1B2224; --t0:#6D807D;
+      --p1:#16302D; --t1:#A9C9C1;
+      --p2:#17403A; --t2:#B6D6CD;
+      --p3:#1A5148; --t3:#C6E2DA;
+      --p4:#1E6557; --t4:#D4EDE4;
+      --p5:#257C6B; --t5:#E6F6F0;
+      --p6:#349A85; --t6:#04201B;
+      --p7:#4EB69D; --t7:#04201B;
+      --p8:#74D2B7; --t8:#052722;
+
+      --bar:#4EB69D;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#101617;
+    --surface:#161E1F;
+    --surface-2:#1C2526;
+    --ink:#E8EFED;
+    --ink-2:#AFC1BD;
+    --muted:#7C908C;
+    --line:#283334;
+    --accent:#D9A54A;
+    --accent-soft:#3A2F16;
+
+    --p0:#1B2224; --t0:#6D807D;
+    --p1:#16302D; --t1:#A9C9C1;
+    --p2:#17403A; --t2:#B6D6CD;
+    --p3:#1A5148; --t3:#C6E2DA;
+    --p4:#1E6557; --t4:#D4EDE4;
+    --p5:#257C6B; --t5:#E6F6F0;
+    --p6:#349A85; --t6:#04201B;
+    --p7:#4EB69D; --t7:#04201B;
+    --p8:#74D2B7; --t8:#052722;
+
+    --bar:#4EB69D;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{
+    max-width:1160px;
+    margin:0 auto;
+    padding-inline:20px;
+    padding-block:40px 64px;
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+  }
+
+  /* ---- header ---- */
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:600;
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:Newsreader,Georgia,serif;
+    font-weight:600;
+    font-size:clamp(30px,5vw,46px);
+    line-height:1.05;
+    letter-spacing:-.015em;
+    margin:0;
+    text-wrap:balance;
+  }
+  h1 em{font-style:italic;color:var(--accent)}
+  .deck{
+    margin:14px 0 0;
+    max-width:62ch;
+    color:var(--ink-2);
+    font-size:16px;
+  }
+  .facts{
+    display:flex;
+    flex-wrap:wrap;
+    gap:0;
+    margin-top:24px;
+    border-top:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .fact{
+    flex:1 1 180px;
+    padding:14px 18px 14px 0;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .fact + .fact{padding-left:18px;border-left:1px solid var(--line)}
+  .fact dt{
+    font-size:11px;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .fact dd{
+    margin:0;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:19px;
+    font-variant-numeric:tabular-nums;
+    color:var(--ink);
+  }
+  .fact dd small{font-family:"IBM Plex Sans",sans-serif;font-size:12px;color:var(--muted);display:block;letter-spacing:0}
+
+  /* ---- table panel ---- */
+  .panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:4px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .panel-head{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:14px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .readout{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:13px;
+    color:var(--ink-2);
+    font-variant-numeric:tabular-nums;
+    min-height:20px;
+  }
+  .readout b{color:var(--ink);font-weight:600}
+  .readout .sep{color:var(--muted);padding:0 6px}
+  .legend{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  .ramp{display:flex;gap:2px}
+  .ramp span{width:16px;height:12px;border-radius:1px}
+
+  .scroller{overflow-x:auto}
+  table{border-collapse:separate;border-spacing:0;font-variant-numeric:tabular-nums}
+  caption{
+    caption-side:top;
+    text-align:left;
+    padding:10px 16px 0;
+    font-size:12px;
+    color:var(--muted);
+  }
+  th,td{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:12.5px;
+    font-weight:500;
+    text-align:center;
+    padding:0;
+    height:28px;
+    min-width:35px;
+    border-right:2px solid var(--surface);
+    border-bottom:2px solid var(--surface);
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  thead th{
+    position:sticky;top:0;z-index:3;
+    background:var(--surface);
+    color:var(--ink-2);
+    font-weight:600;
+    padding-bottom:6px;
+    height:34px;
+  }
+  th.corner{
+    position:sticky;left:0;top:0;z-index:5;
+    background:var(--surface);
+    min-width:62px;
+    font-family:"IBM Plex Sans",sans-serif;
+    font-size:10px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    text-align:left;
+    padding-left:14px;
+  }
+  tbody th{
+    position:sticky;left:0;z-index:2;
+    background:var(--surface);
+    color:var(--ink);
+    font-weight:600;
+    min-width:62px;
+    text-align:left;
+    padding-left:14px;
+    border-right:1px solid var(--line);
+  }
+  tbody th::after{content:"";position:absolute;inset:0;pointer-events:none}
+  thead th.hot,tbody th.hot{color:var(--accent)}
+  thead th.hot{box-shadow:inset 0 -2px 0 var(--accent)}
+  tbody th.hot{box-shadow:inset -2px 0 0 var(--accent)}
+
+  td.c0{background:var(--p0);color:var(--t0)}
+  td.c1{background:var(--p1);color:var(--t1)}
+  td.c2{background:var(--p2);color:var(--t2)}
+  td.c3{background:var(--p3);color:var(--t3)}
+  td.c4{background:var(--p4);color:var(--t4)}
+  td.c5{background:var(--p5);color:var(--t5)}
+  td.c6{background:var(--p6);color:var(--t6)}
+  td.c7{background:var(--p7);color:var(--t7)}
+  td.c8{background:var(--p8);color:var(--t8)}
+  td.ridge{box-shadow:inset 0 0 0 2px var(--accent)}
+  td.live{outline:2px solid var(--ink);outline-offset:-2px}
+  td{cursor:default}
+
+  /* ---- notes + chart ---- */
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+  @media (max-width:820px){.cols{grid-template-columns:1fr}}
+  h2{
+    font-family:Newsreader,Georgia,serif;
+    font-weight:600;font-size:22px;line-height:1.2;margin:0 0 10px;
+    letter-spacing:-.01em;
+  }
+  .note p{margin:0 0 12px;color:var(--ink-2);font-size:14.5px;max-width:60ch}
+  .note p:last-child{margin-bottom:0}
+  .note b{color:var(--ink);font-weight:600}
+  code{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:.9em;
+    background:var(--surface-2);
+    padding:1px 5px;
+    border-radius:3px;
+    color:var(--ink);
+  }
+  .swatch-ridge{display:inline-block;width:11px;height:11px;border:2px solid var(--accent);border-radius:2px;vertical-align:-1px}
+
+  .chart{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:18px 18px 14px;
+  }
+  .chart h3{
+    margin:0;font-size:13px;font-weight:600;color:var(--ink);
+    font-family:"IBM Plex Sans",sans-serif;
+  }
+  .chart .sub{margin:2px 0 18px;font-size:12.5px;color:var(--muted)}
+  .bars{display:flex;align-items:flex-end;gap:2px;height:130px}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;position:relative}
+  .bar i{display:block;width:100%;background:var(--bar);border-radius:3px 3px 0 0}
+  .bar u{
+    position:absolute;bottom:calc(var(--h) + 5px);
+    text-decoration:none;font-family:"IBM Plex Mono",monospace;
+    font-size:10.5px;color:var(--ink-2);white-space:nowrap;
+  }
+  .axis{display:flex;gap:2px;margin-top:6px;border-top:1px solid var(--line);padding-top:5px}
+  .axis span{flex:1;text-align:center;font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted)}
+  .axis span.peak{color:var(--accent);font-weight:600}
+  .axis-title{margin-top:8px;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+
+  footer{
+    border-top:1px solid var(--line);
+    padding-top:14px;
+    font-size:12.5px;
+    color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:6px 18px;
+  }
+  @media (prefers-reduced-motion:no-preference){
+    td,thead th,tbody th{transition:box-shadow .08s linear}
+  }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Probability reference &middot; 3d6 + bonus vs. target number</p>
+    <h1>Every roll on the <em>bell curve</em></h1>
+    <p class="deck">Three six-sided dice don't roll flat. The chance of hitting a target number swings from near-certain to hopeless across just a few points, and the same +1 that barely matters at the edges is worth a full eighth of the odds in the middle. Here is the whole surface at once.</p>
+    <dl class="facts">
+      <div class="fact"><dt>Roll range</dt><dd>3&ndash;18<small>216 equally likely outcomes</small></dd></div>
+      <div class="fact"><dt>Average roll</dt><dd>10.5<small>10 and 11 are the modes, 12.5% each</small></dd></div>
+      <div class="fact"><dt>The even-odds line</dt><dd>TN &minus; bonus = 11<small>exactly 50%, outlined on the table</small></dd></div>
+      <div class="fact"><dt>Best a +1 can do</dt><dd>+12.5 pts<small>and only near the centre</small></dd></div>
+    </dl>
+  </header>
+
+  <section class="panel" aria-labelledby="tbl-h">
+    <div class="panel-head">
+      <div class="readout" id="readout"></div>
+      <div class="legend" aria-hidden="true">
+        <span>0%</span>
+        <span class="ramp">
+          <span style="background:var(--p0)"></span><span style="background:var(--p1)"></span><span style="background:var(--p2)"></span><span style="background:var(--p3)"></span><span style="background:var(--p4)"></span><span style="background:var(--p5)"></span><span style="background:var(--p6)"></span><span style="background:var(--p7)"></span><span style="background:var(--p8)"></span>
+        </span>
+        <span>100%</span>
+      </div>
+    </div>
+    <div class="scroller">
+      <table id="grid">
+        <caption id="tbl-h">Chance that <b>3d6 + bonus</b> reaches the target number or better. Rows are the bonus, columns are the target. Hover any cell for the exact odds.</caption>
+        <thead><tr id="head"><th class="corner" scope="col">Bonus \ TN</th></tr></thead>
+        <tbody id="body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="cols">
+    <div class="note">
+      <h2>How to read it</h2>
+      <p>A cell answers one question: with this bonus, how often do you meet or beat this target? <b>Meets it beats it</b> &mdash; a total exactly equal to the target counts as a hit. If your system makes players <i>exceed</i> the target instead, just read one column to the right.</p>
+      <p>Everything on the table depends only on <code>TN &minus; bonus</code>, the number you need on the raw dice. That's why the bands run in clean diagonals, and why the <span class="swatch-ridge"></span> outlined diagonal &mdash; where the dice need an 11 &mdash; is exactly even odds every time.</p>
+      <p>The steep middle is the design lever. Between a 25% shot and a 75% shot lie only about four points of target number, so in that band a single point of bonus or a &minus;2 penalty is felt immediately. Out past <code>TN &minus; bonus = 16</code> or below <code>6</code>, whole points of modifier barely move the needle &mdash; which is where you want situational bonuses that shouldn't dominate.</p>
+      <p>Set routine tasks around 6&ndash;8 above the expected bonus, hard ones around 11, and reserve 15+ for feats that should mostly fail. A character with +0 hits a TN 15 once in twelve tries.</p>
+    </div>
+
+    <figure class="chart" style="margin:0">
+      <h3>What one extra point of bonus buys you</h3>
+      <p class="sub">Percentage points gained by going from +n to +n&thinsp;+&thinsp;1, by the number the dice currently need. It is the 3d6 curve itself.</p>
+      <div class="bars" id="bars"></div>
+      <div class="axis" id="axis"></div>
+      <p class="axis-title">Number needed on 3d6 (TN &minus; bonus)</p>
+    </figure>
+  </div>
+
+  <footer>
+    <span>Exact odds &mdash; every value is a count out of 216 outcomes, not a simulation.</span>
+    <span>Assumes no criticals, no exploding dice, no rerolls.</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var counts=[1,3,6,10,15,21,25,27,27,25,21,15,10,6,3,1]; // totals 3..18
+  function atLeast(n){ var t=0; for(var s=Math.max(3,n); s<=18; s++){ if(s>=3&&s<=18) t+=counts[s-3]; } return n>18?0:t; }
+  function bin(p){ if(p<=0)return 0; if(p<5)return 1; if(p<15)return 2; if(p<30)return 3; if(p<50)return 4; if(p<70)return 5; if(p<85)return 6; if(p<99)return 7; return 8; }
+  function fmt(p){ if(p<=0)return "·"; if(p>=99.95)return "100"; if(p>=10)return String(Math.round(p)); return p.toFixed(1); }
+  function sgn(b){ return b>0? "+"+b : String(b); }
+
+  var TNS=[],B=[],i;
+  for(i=3;i<=28;i++) TNS.push(i);
+  for(i=-5;i<=10;i++) B.push(i);
+
+  var head=document.getElementById("head");
+  TNS.forEach(function(d){
+    var th=document.createElement("th");
+    th.scope="col"; th.textContent=d; th.dataset.tn=d;
+    head.appendChild(th);
+  });
+
+  var body=document.getElementById("body");
+  B.forEach(function(b){
+    var tr=document.createElement("tr");
+    var th=document.createElement("th");
+    th.scope="row"; th.textContent=sgn(b); th.dataset.bonus=b;
+    tr.appendChild(th);
+    TNS.forEach(function(d){
+      var need=d-b, c=atLeast(need), p=c/216*100;
+      var td=document.createElement("td");
+      td.className="c"+bin(p)+(need===11?" ridge":"");
+      td.textContent=fmt(p);
+      td.dataset.b=b; td.dataset.d=d;
+      td.setAttribute("aria-label","Bonus "+sgn(b)+", target "+d+": "+p.toFixed(2)+" percent");
+      tr.appendChild(td);
+    });
+    body.appendChild(tr);
+  });
+
+  var out=document.getElementById("readout"), last=null;
+  function show(b,d){
+    var need=d-b, c=atLeast(need), p=c/216*100, tail;
+    if(need<=3) tail="any roll clears it";
+    else if(need>18) tail="out of reach — even an 18 falls short";
+    else tail="needs "+need+"+ on the dice";
+    out.innerHTML="Bonus <b>"+sgn(b)+"</b> vs TN <b>"+d+"</b><span class=\"sep\">→</span><b>"+p.toFixed(2)+"%</b><span class=\"sep\">·</span>"+c+" of 216<span class=\"sep\">·</span>"+tail;
+  }
+  function clear(){
+    if(last){ last.cell.classList.remove("live"); last.col.classList.remove("hot"); last.row.classList.remove("hot"); last=null; }
+  }
+  var grid=document.getElementById("grid");
+  grid.addEventListener("mouseover",function(e){
+    var td=e.target.closest("td"); if(!td) return;
+    clear();
+    var b=+td.dataset.b, d=+td.dataset.d;
+    var col=head.querySelector('[data-tn="'+d+'"]');
+    var row=body.querySelector('[data-bonus="'+b+'"]');
+    td.classList.add("live"); col.classList.add("hot"); row.classList.add("hot");
+    last={cell:td,col:col,row:row};
+    show(b,d);
+  });
+  grid.addEventListener("mouseleave",function(){ clear(); show(3,13); });
+  show(3,13);
+
+  var bars=document.getElementById("bars"), axis=document.getElementById("axis"), max=27;
+  for(i=3;i<=18;i++){
+    var v=counts[i-3]/216*100, h=Math.round(counts[i-3]/max*100);
+    var d1=document.createElement("div");
+    d1.className="bar"; d1.style.setProperty("--h",h+"%");
+    var lab=(counts[i-3]===27||i===3||i===18)?'<u>'+v.toFixed(1)+'</u>':'';
+    d1.innerHTML=lab+'<i style="height:'+h+'%"></i>';
+    bars.appendChild(d1);
+    var sp=document.createElement("span");
+    sp.textContent=i; if(counts[i-3]===27) sp.className="peak";
+    axis.appendChild(sp);
+  }
+})();
+</script>
+
+</body>
+</html>
